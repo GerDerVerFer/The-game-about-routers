@@ -1,5 +1,5 @@
 import { Graphics } from "pixi.js";
-import type { Camera } from "./Camera.ts";
+import type { Camera } from "./Camera";
 
 // Interface for grid rendering options
 export interface GridOptions {

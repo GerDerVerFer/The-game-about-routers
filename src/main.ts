@@ -1,19 +1,20 @@
 import { Application } from "pixi.js";
-import { COLOR, WORLD, CAMERA, GRID } from "./Config.ts";
-import { CanvasRenderer } from "./Modules/Canvas.ts";
-import { installCameraControls } from "./Modules/Controls.ts";
+import { COLOR, WORLD, CAMERA, GRID } from "./Config";
+import { CanvasRenderer } from "./Modules/Canvas";
+import { installCameraControls } from "./Modules/Controls";
 
 async function init() {
   // App init
   const app = new Application();
 
-  // Canvas settings
   await app.init({
     backgroundColor: COLOR.BG,
     resizeTo: window,
     antialias: true,
   });
   document.body.appendChild(app.canvas);
+
+  // Canvas settings
   const scene = new CanvasRenderer(
     app,
     {

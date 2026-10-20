@@ -1,4 +1,4 @@
-import { CAMERA } from "../Config.ts";
+import { CAMERA } from "../Config";
 
 // Interface for camera options
 export interface CameraOptions {

@@ -1,7 +1,7 @@
 import { Application, Container, Graphics } from "pixi.js";
 import { Camera, type CameraOptions } from "./Camera";
 import { GridRenderer, type GridOptions } from "./GridRenderer";
-import { COLOR } from "../Config.ts";
+import { COLOR } from "../Config";
 
 // Main canvas renderer class.
 // Manages the camera, grid, and world objects
