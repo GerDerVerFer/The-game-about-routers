@@ -1,3 +1,5 @@
+import { CAMERA } from "../Config.ts";
+
 // Interface for camera options
 export interface CameraOptions {
   worldWidth: number;
@@ -21,8 +23,8 @@ export class Camera {
   constructor(options: CameraOptions) {
     this.worldWidth = options.worldWidth;
     this.worldHeight = options.worldHeight;
-    this.minZoom = options.minZoom ?? 0.5;
-    this.maxZoom = options.maxZoom ?? 2;
+    this.minZoom = options.minZoom ?? CAMERA.MIN_ZOOM;
+    this.maxZoom = options.maxZoom ?? CAMERA.MAX_ZOOM;
 
     // Initialize camera position to the center of the world
     this.x = this.worldWidth / 2;
