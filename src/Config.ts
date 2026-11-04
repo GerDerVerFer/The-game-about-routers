@@ -21,6 +21,8 @@ export const COLOR = {
   GRID_DOT: 0x636973,
 } as const;
 
+// ============================================================================
+// GRID CONSTANTS
 export const GRID = {
   SPACING: 24,
   DOT_RADIUS: 1.5,

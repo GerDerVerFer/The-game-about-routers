@@ -10,9 +10,38 @@ export const NODE_LABELS: Record<NodeTypes, string> = {
   ids: "IDS/IPS",
 };
 
+// Nodes
 export interface Node {
   id: string;
   type: NodeTypes;
   x: number;
   y: number;
+}
+
+// Links
+export interface Link {
+  id: string;
+  fromId: string;
+  toId: string;
+}
+
+// Factory functions to create nodes and links with unique IDs
+let nodeIdCounter = 1;
+let linkIdCounter = 1;
+
+export function createNode(type: NodeTypes, x: number, y: number): Node {
+  return {
+    id: `n${nodeIdCounter++}`,
+    type,
+    x,
+    y,
+  };
+}
+
+export function createLink(fromId: string, toId: string): Link {
+  return {
+    id: `l${linkIdCounter++}`,
+    fromId,
+    toId,
+  };
 }
