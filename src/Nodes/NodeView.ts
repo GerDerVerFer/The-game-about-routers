@@ -2,11 +2,19 @@ import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import { NODE_LABELS, type Node } from "./Types";
 
 const Size = 64;
+
 export class NodeView extends Container {
-  constructor(public readonly data: Node) {
+  public readonly data: Node;
+
+  constructor(data: Node) {
     super();
+    this.data = data;
     this.x = data.x;
     this.y = data.y;
+
+    // Pixi settings for interactivity
+    this.eventMode = "static";
+    this.cursor = "pointer";
 
     const bg = new Graphics()
       .roundRect(-Size / 2, -Size / 2, Size, Size, 8)
