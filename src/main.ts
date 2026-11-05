@@ -50,6 +50,31 @@ async function init() {
   panBtn.addEventListener("click", () => setMode("pan"));
   connectBtn.addEventListener("click", () => setMode("connect"));
 
+  const inspectorContent = document.getElementById("inspector-content")!;
+
+  function updateInspector(nodeId: string | null) {
+    if (!nodeId) {
+      inspectorContent.className = "empty-msg";
+      inspectorContent.innerHTML =
+        "Выберите устройство на схеме для просмотра деталей.<br><br><i>(ПКМ по ноде/связи — удалить)</i>";
+      return;
+    }
+
+    const nodeView = scene.nodes.get(nodeId);
+    if (nodeView) {
+      inspectorContent.className = "";
+      inspectorContent.innerHTML = `
+        <p><strong>ID:</strong> ${nodeView.data.id}</p>
+        <p><strong>Тип:</strong> ${nodeView.data.type.toUpperCase()}</p>
+        <p><strong>Координаты:</strong> X: ${Math.round(nodeView.data.x)}, Y: ${Math.round(nodeView.data.y)}</p>
+        <hr style="border-color: #2a2f3a; margin: 12px 0;" />
+        <p style="color: #4ade80;">Статус: Работает</p>
+      `;
+    }
+  }
+
+  updateInspector(null);
+
   // Changing controls
   installCameraControls(
     app,
@@ -59,11 +84,12 @@ async function init() {
     (fromId, toId) => {
       scene.links.add(fromId, toId);
     },
+    updateInspector,
   );
 
-  // Addding nodes to the scene when clicking the toolbar buttons
+  // Add nodes to the scene when clicking the catalog buttons
   document
-    .querySelectorAll<HTMLButtonElement>("#toolbar [data-add]")
+    .querySelectorAll<HTMLButtonElement>("#catalog [data-add]")
     .forEach((btn) => {
       btn.addEventListener("click", () => {
         const kind = btn.dataset.add as NodeTypes;
@@ -77,13 +103,27 @@ async function init() {
           height,
         );
 
-        // Snapping nodes to the grid when adding them to the scene
-        const snappedX = Math.round(center.x / GRID.SPACING) * GRID.SPACING;
-        const snappedY = Math.round(center.y / GRID.SPACING) * GRID.SPACING;
+        let snappedX = Math.round(center.x / GRID.SPACING) * GRID.SPACING;
+        let snappedY = Math.round(center.y / GRID.SPACING) * GRID.SPACING;
+
+        // Find an unoccupied grid cell so nodes do not overlap.
+        let isOccupied = true;
+        while (isOccupied) {
+          isOccupied = scene.nodes
+            .getAll()
+            .some(
+              (node) => node.data.x === snappedX && node.data.y === snappedY,
+            );
+          if (isOccupied) {
+            snappedX += GRID.SPACING;
+            snappedY += GRID.SPACING;
+          }
+        }
 
         scene.nodes.add(kind, snappedX, snappedY);
       });
     });
+  scene.redraw();
 }
 
 await init();

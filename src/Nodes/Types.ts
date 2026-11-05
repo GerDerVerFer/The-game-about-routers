@@ -2,11 +2,11 @@ export type NodeTypes =
   "router" | "firewall" | "server" | "client" | "crypto" | "ids";
 
 export const NODE_LABELS: Record<NodeTypes, string> = {
-  router: "Router",
-  firewall: "Firewall",
-  server: "Server",
-  client: "Client",
-  crypto: "Crypto",
+  router: "Роутер",
+  firewall: "Фаервол",
+  server: "Сервер",
+  client: "Клиент",
+  crypto: "СКЗИ",
   ids: "IDS/IPS",
 };
 

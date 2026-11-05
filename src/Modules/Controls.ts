@@ -2,6 +2,7 @@ import type { Application } from "pixi.js";
 import type { CanvasRenderer } from "./Canvas";
 import type { ToolMode } from "../main";
 import { GRID } from "../Config";
+import type { NodeView } from "../Nodes/NodeView";
 
 export function installCameraControls(
   app: Application,
@@ -9,16 +10,14 @@ export function installCameraControls(
   getMode: () => ToolMode,
   onChange: () => void,
   onConnect: (fromId: string, toId: string) => void,
+  onSelectNode: (id: string | null) => void,
 ): () => void {
   const canvas = app.canvas as HTMLCanvasElement;
   const camera = scene.camera;
 
   let draggingCamera = false;
-  let draggingNode: {
-    data: { x: number; y: number };
-    x: number;
-    y: number;
-  } | null = null;
+  let draggingNode: NodeView | null = null;
+  let selectedNode: NodeView | null = null;
   let lastX = 0;
   let lastY = 0;
 
@@ -28,6 +27,7 @@ export function installCameraControls(
   let firstSelectedNodeId: string | null = null;
 
   const onDown = (e: PointerEvent) => {
+    if (e.button !== 0) return;
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
@@ -40,43 +40,49 @@ export function installCameraControls(
     );
     const clickedNode = scene.nodes.hitTest(worldPos.x, worldPos.y);
 
-    // CONNECT MODE LOGIC
+    // CONNECT MODE
     if (getMode() === "connect") {
       if (clickedNode) {
         if (!firstSelectedNodeId) {
-          // Save the first selected node's ID and provide visual feedback
           firstSelectedNodeId = clickedNode.data.id;
-          clickedNode.alpha = 0.5; // Feedback for selection
+          clickedNode.alpha = 0.5;
         } else if (firstSelectedNodeId !== clickedNode.data.id) {
-          // Second node clicked, emit the connection event
           onConnect(firstSelectedNodeId, clickedNode.data.id);
-
-          // Reset
           const prevNode = scene.nodes.get(firstSelectedNodeId);
           if (prevNode) prevNode.alpha = 1;
           firstSelectedNodeId = null;
         }
       } else {
-        // Resetting selection if clicked on empty space
         if (firstSelectedNodeId) {
           const prevNode = scene.nodes.get(firstSelectedNodeId);
           if (prevNode) prevNode.alpha = 1;
           firstSelectedNodeId = null;
         }
       }
-      return; // Connect mode freezes other interactions, so we exit early
+      return;
     }
 
-    // PAN MODE LOGIC
+    // PAN MODE
     if (getMode() === "pan") {
       if (clickedNode) {
+        if (selectedNode && selectedNode !== clickedNode) {
+          selectedNode.setSelected(false);
+        }
+        selectedNode = clickedNode;
+        selectedNode.setSelected(true);
+        onSelectNode(clickedNode.data.id);
+
         draggingNode = clickedNode;
         lastX = e.clientX;
         lastY = e.clientY;
         scene.nodes.display.addChild(clickedNode);
         canvas.style.cursor = "move";
       } else {
-        // Moving the camera if empty space is clicked
+        if (selectedNode) {
+          selectedNode.setSelected(false);
+          selectedNode = null;
+          onSelectNode(null);
+        }
         draggingCamera = true;
         lastX = e.clientX;
         lastY = e.clientY;
@@ -104,6 +110,9 @@ export function installCameraControls(
       lastX = e.clientX;
       lastY = e.clientY;
       scene.links.redraw();
+      if (selectedNode === draggingNode) {
+        onSelectNode(draggingNode.data.id);
+      }
     }
   };
 
@@ -122,6 +131,35 @@ export function installCameraControls(
 
     draggingCamera = false;
     canvas.style.cursor = getMode() === "pan" ? "grab" : "crosshair";
+  };
+
+  const onContextMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const worldPos = camera.screenToWorld(
+      sx,
+      sy,
+      app.screen.width,
+      app.screen.height,
+    );
+
+    const clickedNode = scene.nodes.hitTest(worldPos.x, worldPos.y);
+    if (clickedNode) {
+      if (selectedNode === clickedNode) {
+        selectedNode = null;
+        onSelectNode(null);
+      }
+      scene.links.removeByNode(clickedNode.data.id);
+      scene.nodes.remove(clickedNode.data.id);
+      return;
+    }
+
+    const clickedLinkId = scene.links.hitTest(worldPos.x, worldPos.y);
+    if (clickedLinkId) {
+      scene.links.remove(clickedLinkId);
+    }
   };
 
   const onWheel = (e: WheelEvent) => {
@@ -149,6 +187,7 @@ export function installCameraControls(
   canvas.addEventListener("pointerdown", onDown);
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp);
+  canvas.addEventListener("contextmenu", onContextMenu);
   canvas.addEventListener("wheel", onWheel, { passive: false });
   canvas.style.cursor = getMode() === "pan" ? "grab" : "crosshair";
 
@@ -156,6 +195,7 @@ export function installCameraControls(
     canvas.removeEventListener("pointerdown", onDown);
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    canvas.removeEventListener("contextmenu", onContextMenu);
     canvas.removeEventListener("wheel", onWheel);
   };
 }

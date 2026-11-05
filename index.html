@@ -1,69 +1,47 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
-  <title>Empty one</title>
-  <style>
-    html,
-    body {
-      margin: 0;
-      height: 100%;
-      overflow: hidden;
-      font-family: system-ui;
-    }
-
-    #toolbar {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      display: flex;
-      gap: 6px;
-      padding: 8px;
-      background: rgba(23, 27, 36, 0.9);
-      border: 1px solid #2a2f3a;
-      border-radius: 8px;
-      z-index: 10;
-    }
-
-    #toolbar button.active {
-      background: #4a505c;
-      color: #fff;
-      border-color: #cfd5de;
-    }
-
-    #toolbar button {
-      background: #2a2f3a;
-      color: #cfd5de;
-      border: 1px solid #4a505c;
-      border-radius: 4px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-family: inherit;
-    }
-
-    #toolbar button:hover {
-      background: #4a505c;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Network Architect</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 
 <body>
-  <div id="toolbar">
-    <button data-add="router">Router</button>
-    <button data-add="firewall">Firewall</button>
-    <button data-add="server">Server</button>
-    <button data-add="client">Client</button>
-
-
-    <!-- Разделитель -->
-    <span style="width: 1px; background: #4a505c; margin: 0 8px;"></span>
-
-    <button id="mode-pan" class="active">Pan</button>
-    <button id="mode-connect">Connect</button>
+  <!-- Верхняя панель (Статус) -->
+  <div id="top-bar">
+    <div class="stat">Бюджет: <span>$ NAN</span></div>
+    <div class="stat">Репутация: <span>NAN</span></div>
+    <div class="stat">Время: NAN</div>
   </div>
-  <script type="module" src="/src/main.ts">
-  </script>
+
+  <!-- Левая панель (Каталог) -->
+  <div id="catalog">
+    <h3>Оборудование</h3>
+    <button data-add="router">Роутер</button>
+    <button data-add="firewall">Фаервол</button>
+    <button data-add="server">Сервер</button>
+    <button data-add="client">Клиент</button>
+    <button data-add="crypto">СКЗИ</button>
+    <button data-add="ids">IDS/IPS</button>
+  </div>
+
+  <!-- Inspector  -->
+  <div id="inspector">
+    <h3>Инспектор</h3>
+    <div id="inspector-content" class="empty-msg">
+      Выберите устройство на схеме для просмотра деталей.
+    </div>
+  </div>
+
+  <!-- Нижняя панель (Инструменты) -->
+  <div id="bottom-bar">
+    <button id="mode-pan" class="active">Pan</button>
+    <button id="mode-connect">Connection</button>
+  </div>s
+
+  <script type="module" src="/src/main.ts"></script>
 </body>
 
 </html>
