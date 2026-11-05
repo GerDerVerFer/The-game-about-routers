@@ -41,6 +41,7 @@ export const GRID = {
 // ============================================================================
 // NODE CONSTANTS
 export const NODE = {
+  LINK_WIDTH: 4,
   SIZE: 64,
   BORDER_RADIUS: 8,
   BORDER_WIDTH: 2,
