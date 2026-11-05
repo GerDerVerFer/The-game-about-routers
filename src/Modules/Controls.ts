@@ -1,6 +1,7 @@
 import type { Application } from "pixi.js";
 import type { CanvasRenderer } from "./Canvas";
 import type { ToolMode } from "../main";
+import { GRID } from "../Config";
 
 export function installCameraControls(
   app: Application,
@@ -21,7 +22,7 @@ export function installCameraControls(
   let lastX = 0;
   let lastY = 0;
 
-  const GRID_SNAP = 24;
+  const GRID_SNAP = GRID.SPACING;
 
   // for connect mode, we need to remember the first selected node
   let firstSelectedNodeId: string | null = null;
