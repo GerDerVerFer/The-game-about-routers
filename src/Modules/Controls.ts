@@ -50,7 +50,7 @@ export function installCameraControls(
           // Second node clicked, emit the connection event
           onConnect(firstSelectedNodeId, clickedNode.data.id);
 
-          // Сбрасываем выделение
+          // Reset
           const prevNode = scene.nodes.get(firstSelectedNodeId);
           if (prevNode) prevNode.alpha = 1;
           firstSelectedNodeId = null;
