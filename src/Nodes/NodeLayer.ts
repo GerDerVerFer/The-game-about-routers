@@ -30,4 +30,16 @@ export class NodeLayer {
   getAll(): NodeView[] {
     return Array.from(this.nodes.values());
   }
+  hitTest(x: number, y: number): NodeView | undefined {
+    // checking all nodes to see if the click is within their bounds
+    for (const view of this.nodes.values()) {
+      const dx = x - view.data.x;
+      const dy = y - view.data.y;
+      // If the click is within the node's bounds
+      if (Math.abs(dx) <= 32 && Math.abs(dy) <= 32) {
+        return view;
+      }
+    }
+    return undefined;
+  }
 }

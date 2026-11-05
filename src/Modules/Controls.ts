@@ -1,27 +1,78 @@
 import type { Application } from "pixi.js";
-import type { Camera } from "./Camera";
+import type { CanvasRenderer } from "./Canvas";
+import type { ToolMode } from "../main";
 
 export function installCameraControls(
   app: Application,
-  camera: Camera,
+  scene: CanvasRenderer,
+  getMode: () => ToolMode,
   onChange: () => void,
-): // Lambda to change camera control constants (dragging and zooming)
-// for the canvas
-() => void {
+  onConnect: (fromId: string, toId: string) => void,
+): () => void {
   const canvas = app.canvas as HTMLCanvasElement;
-  let dragging = false;
-  let lastX = 0,
-    lastY = 0;
+  const camera = scene.camera;
 
-  // user interacting with the canvas right now
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  // Для режима Connect: храним id первой выбранной ноды
+  let firstSelectedNodeId: string | null = null;
+
   const onDown = (e: PointerEvent) => {
-    dragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    canvas.style.cursor = "grabbing";
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const worldPos = camera.screenToWorld(
+      sx,
+      sy,
+      app.screen.width,
+      app.screen.height,
+    );
+    const clickedNode = scene.nodes.hitTest(worldPos.x, worldPos.y);
+
+    // === ЛОГИКА ДЛЯ РЕЖИМА CONNECT ===
+    if (getMode() === "connect") {
+      if (clickedNode) {
+        if (!firstSelectedNodeId) {
+          // Первый клик - запоминаем ноду
+          firstSelectedNodeId = clickedNode.data.id;
+          clickedNode.alpha = 0.5; // Визуальный отклик
+        } else if (firstSelectedNodeId !== clickedNode.data.id) {
+          // Второй клик - создаем связь
+          onConnect(firstSelectedNodeId, clickedNode.data.id);
+
+          // Сбрасываем выделение
+          const prevNode = scene.nodes.get(firstSelectedNodeId);
+          if (prevNode) prevNode.alpha = 1;
+          firstSelectedNodeId = null;
+        }
+      } else {
+        // Кликнули в пустоту в режиме Connect - сбрасываем выбор
+        if (firstSelectedNodeId) {
+          const prevNode = scene.nodes.get(firstSelectedNodeId);
+          if (prevNode) prevNode.alpha = 1;
+          firstSelectedNodeId = null;
+        }
+      }
+      return; // В режиме connect камеру не таскаем
+    }
+
+    // === ЛОГИКА ДЛЯ РЕЖИМА PAN ===
+    if (getMode() === "pan") {
+      if (!clickedNode) {
+        // Кликнули в пустоту - таскаем камеру
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        canvas.style.cursor = "grabbing";
+      } else {
+        // Кликнули по ноде в режиме pan - (здесь можно добавить перетаскивание ноды, но пока игнорируем)
+      }
+    }
   };
 
-  // user moving the mouse while interacting with the canvas
   const onMove = (e: PointerEvent) => {
     if (!dragging) return;
     camera.x -= (e.clientX - lastX) / camera.zoom;
@@ -31,30 +82,21 @@ export function installCameraControls(
     onChange();
   };
 
-  // user stopped interacting with the canvas
   const onUp = () => {
     dragging = false;
-    canvas.style.cursor = "grab";
+    canvas.style.cursor = getMode() === "pan" ? "grab" : "crosshair";
   };
 
-  // user is zooming in or out on the canvas
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
-
-    // Using bounding bc we will draw another UI,
-    // so it will be better to have the mouse position relative
-    // to the canvas
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-
     const viewW = app.screen.width;
     const viewH = app.screen.height;
     const cx = viewW / 2,
       cy = viewH / 2;
 
-    // Calculate the world coordinates before zooming
-    // to maintain the position of the point under the cursor
     const before = camera.screenToWorld(sx, sy, viewW, viewH);
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
     camera.zoom = Math.min(
@@ -67,12 +109,11 @@ export function installCameraControls(
     onChange();
   };
 
-  // Add event listeners for mouse and wheel events
   canvas.addEventListener("pointerdown", onDown);
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp);
   canvas.addEventListener("wheel", onWheel, { passive: false });
-  canvas.style.cursor = "grab";
+  canvas.style.cursor = getMode() === "pan" ? "grab" : "crosshair";
 
   return () => {
     canvas.removeEventListener("pointerdown", onDown);

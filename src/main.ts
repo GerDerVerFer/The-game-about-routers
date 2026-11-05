@@ -4,10 +4,11 @@ import { CanvasRenderer } from "./Modules/Canvas";
 import { installCameraControls } from "./Modules/Controls";
 import type { NodeTypes } from "./Nodes/Types";
 
-async function init() {
-  // App init
-  const app = new Application();
+// Current tool mode, either "pan" for moving the camera or "connect" for linking nodes
+export type ToolMode = "pan" | "connect";
 
+async function init() {
+  const app = new Application();
   await app.init({
     backgroundColor: COLOR.BG,
     resizeTo: window,
@@ -15,7 +16,6 @@ async function init() {
   });
   document.body.appendChild(app.canvas);
 
-  // Canvas settings
   const scene = new CanvasRenderer(
     app,
     {
@@ -32,18 +32,42 @@ async function init() {
     },
   );
 
-  installCameraControls(app, scene.camera, () => scene.redraw());
-  window.addEventListener("resize", () => scene.redraw());
+  // type setup for the current tool mode, defaulting to "pan"
+  let currentMode: ToolMode = "pan";
 
-  scene.redraw();
+  const panBtn = document.getElementById("mode-pan")!;
+  const connectBtn = document.getElementById("mode-connect")!;
 
+  function setMode(mode: ToolMode) {
+    currentMode = mode;
+
+    panBtn.classList.toggle("active", mode === "pan");
+    connectBtn.classList.toggle("active", mode === "connect");
+
+    app.canvas.style.cursor = mode === "pan" ? "grab" : "crosshair";
+  }
+
+  panBtn.addEventListener("click", () => setMode("pan"));
+  connectBtn.addEventListener("click", () => setMode("connect"));
+
+  // Changing controls
+  installCameraControls(
+    app,
+    scene,
+    () => currentMode,
+    () => scene.redraw(),
+    (fromId, toId) => {
+      scene.links.add(fromId, toId);
+    },
+  );
+
+  // Addding nodes to the scene when clicking the toolbar buttons
   document
     .querySelectorAll<HTMLButtonElement>("#toolbar [data-add]")
     .forEach((btn) => {
       btn.addEventListener("click", () => {
         const kind = btn.dataset.add as NodeTypes;
         const { width, height } = app.screen;
-        // Центр экрана в мировых координатах
         const center = scene.camera.screenToWorld(
           width / 2,
           height / 2,
@@ -53,5 +77,9 @@ async function init() {
         scene.nodes.add(kind, center.x, center.y);
       });
     });
+
+  window.addEventListener("resize", () => scene.redraw());
+  scene.redraw();
 }
+
 await init();
