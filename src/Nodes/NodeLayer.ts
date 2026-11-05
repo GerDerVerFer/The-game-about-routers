@@ -1,6 +1,7 @@
 import { Container } from "pixi.js";
 import { NodeView } from "./NodeView";
 import { createNode, type NodeTypes } from "./Types";
+import { NODE } from "../Config";
 
 export class NodeLayer {
   readonly display = new Container();
@@ -36,7 +37,7 @@ export class NodeLayer {
       const dx = x - view.data.x;
       const dy = y - view.data.y;
       // If the click is within the node's bounds
-      if (Math.abs(dx) <= 32 && Math.abs(dy) <= 32) {
+      if (Math.abs(dx) <= NODE.SIZE / 2 && Math.abs(dy) <= NODE.SIZE / 2) {
         return view;
       }
     }

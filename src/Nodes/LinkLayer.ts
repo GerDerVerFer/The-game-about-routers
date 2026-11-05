@@ -1,6 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { createLink, type Link } from "./Types";
 import type { NodeLayer } from "./NodeLayer";
+import { COLOR, NODE } from "../Config";
 
 export class LinkLayer {
   readonly display = new Container();
@@ -42,7 +43,7 @@ export class LinkLayer {
         this.graphics
           .moveTo(fromNode.data.x, fromNode.data.y)
           .lineTo(toNode.data.x, toNode.data.y)
-          .stroke({ color: 0x636973, width: 4 });
+          .stroke({ color: COLOR.LINK_LINE, width: NODE.LINK_WIDTH });
       }
     }
   }

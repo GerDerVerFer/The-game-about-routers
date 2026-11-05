@@ -68,18 +68,22 @@ async function init() {
       btn.addEventListener("click", () => {
         const kind = btn.dataset.add as NodeTypes;
         const { width, height } = app.screen;
+
+        // Получаем мировые координаты центра экрана
         const center = scene.camera.screenToWorld(
           width / 2,
           height / 2,
           width,
           height,
         );
-        scene.nodes.add(kind, center.x, center.y);
+
+        // Snapping nodes to the grid when adding them to the scene
+        const snappedX = Math.round(center.x / GRID.SPACING) * GRID.SPACING;
+        const snappedY = Math.round(center.y / GRID.SPACING) * GRID.SPACING;
+
+        scene.nodes.add(kind, snappedX, snappedY);
       });
     });
-
-  window.addEventListener("resize", () => scene.redraw());
-  scene.redraw();
 }
 
 await init();
