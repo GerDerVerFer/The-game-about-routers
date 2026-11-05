@@ -12,11 +12,18 @@ export function installCameraControls(
   const canvas = app.canvas as HTMLCanvasElement;
   const camera = scene.camera;
 
-  let dragging = false;
+  let draggingCamera = false;
+  let draggingNode: {
+    data: { x: number; y: number };
+    x: number;
+    y: number;
+  } | null = null;
   let lastX = 0;
   let lastY = 0;
 
-  // Для режима Connect: храним id первой выбранной ноды
+  const GRID_SNAP = 24;
+
+  // for connect mode, we need to remember the first selected node
   let firstSelectedNodeId: string | null = null;
 
   const onDown = (e: PointerEvent) => {
@@ -32,15 +39,15 @@ export function installCameraControls(
     );
     const clickedNode = scene.nodes.hitTest(worldPos.x, worldPos.y);
 
-    // === ЛОГИКА ДЛЯ РЕЖИМА CONNECT ===
+    // CONNECT MODE LOGIC
     if (getMode() === "connect") {
       if (clickedNode) {
         if (!firstSelectedNodeId) {
-          // Первый клик - запоминаем ноду
+          // Save the first selected node's ID and provide visual feedback
           firstSelectedNodeId = clickedNode.data.id;
-          clickedNode.alpha = 0.5; // Визуальный отклик
+          clickedNode.alpha = 0.5; // Feedback for selection
         } else if (firstSelectedNodeId !== clickedNode.data.id) {
-          // Второй клик - создаем связь
+          // Second node clicked, emit the connection event
           onConnect(firstSelectedNodeId, clickedNode.data.id);
 
           // Сбрасываем выделение
@@ -49,41 +56,70 @@ export function installCameraControls(
           firstSelectedNodeId = null;
         }
       } else {
-        // Кликнули в пустоту в режиме Connect - сбрасываем выбор
+        // Resetting selection if clicked on empty space
         if (firstSelectedNodeId) {
           const prevNode = scene.nodes.get(firstSelectedNodeId);
           if (prevNode) prevNode.alpha = 1;
           firstSelectedNodeId = null;
         }
       }
-      return; // В режиме connect камеру не таскаем
+      return; // Connect mode freezes other interactions, so we exit early
     }
 
-    // === ЛОГИКА ДЛЯ РЕЖИМА PAN ===
+    // PAN MODE LOGIC
     if (getMode() === "pan") {
-      if (!clickedNode) {
-        // Кликнули в пустоту - таскаем камеру
-        dragging = true;
+      if (clickedNode) {
+        draggingNode = clickedNode;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        scene.nodes.display.addChild(clickedNode);
+        canvas.style.cursor = "move";
+      } else {
+        // Moving the camera if empty space is clicked
+        draggingCamera = true;
         lastX = e.clientX;
         lastY = e.clientY;
         canvas.style.cursor = "grabbing";
-      } else {
-        // Кликнули по ноде в режиме pan - (здесь можно добавить перетаскивание ноды, но пока игнорируем)
       }
     }
   };
 
   const onMove = (e: PointerEvent) => {
-    if (!dragging) return;
-    camera.x -= (e.clientX - lastX) / camera.zoom;
-    camera.y -= (e.clientY - lastY) / camera.zoom;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    onChange();
+    if (draggingCamera) {
+      camera.x -= (e.clientX - lastX) / camera.zoom;
+      camera.y -= (e.clientY - lastY) / camera.zoom;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      onChange();
+    } else if (draggingNode) {
+      const dx = (e.clientX - lastX) / camera.zoom;
+      const dy = (e.clientY - lastY) / camera.zoom;
+
+      draggingNode.data.x += dx;
+      draggingNode.data.y += dy;
+      draggingNode.x = draggingNode.data.x;
+      draggingNode.y = draggingNode.data.y;
+
+      lastX = e.clientX;
+      lastY = e.clientY;
+      scene.links.redraw();
+    }
   };
 
   const onUp = () => {
-    dragging = false;
+    if (draggingNode) {
+      const snappedX = Math.round(draggingNode.data.x / GRID_SNAP) * GRID_SNAP;
+      const snappedY = Math.round(draggingNode.data.y / GRID_SNAP) * GRID_SNAP;
+
+      draggingNode.data.x = snappedX;
+      draggingNode.data.y = snappedY;
+      draggingNode.x = snappedX;
+      draggingNode.y = snappedY;
+      scene.links.redraw();
+      draggingNode = null;
+    }
+
+    draggingCamera = false;
     canvas.style.cursor = getMode() === "pan" ? "grab" : "crosshair";
   };
 
