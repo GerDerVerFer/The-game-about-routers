@@ -8,7 +8,7 @@ export class NodeView extends Container {
   public readonly data: Node;
   private bg: Graphics;
   private progressBar: Graphics;
-
+  private isSelected: boolean = false;
   constructor(data: Node) {
     super();
     this.data = data;
@@ -28,7 +28,7 @@ export class NodeView extends Container {
     const label = new Text({
       text: NODE_LABELS[data.type],
       style: new TextStyle({
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "Cascadia Code",
         fontSize: 12,
         fill: COLOR.NODE_TEXT,
       }),
@@ -38,6 +38,10 @@ export class NodeView extends Container {
 
     this.addChild(this.bg, label, this.progressBar);
     this.updateVisuals();
+  }
+  public setSelected(selected: boolean) {
+    this.isSelected = selected;
+    this.updateVisuals(); // Перерисовываем при изменении выделения
   }
 
   public updateVisuals() {

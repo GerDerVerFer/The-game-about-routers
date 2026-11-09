@@ -40,9 +40,13 @@ export function installCameraControls(
     );
     const clickedNode = scene.nodes.hitTest(worldPos.x, worldPos.y);
 
-    // CONNECT MODE
     if (getMode() === "connect") {
       if (clickedNode) {
+        // ДОБАВЛЯЕМ ПРОВЕРКУ:
+        if (clickedNode.data.status !== "active") {
+          return;
+        }
+
         if (!firstSelectedNodeId) {
           firstSelectedNodeId = clickedNode.data.id;
           clickedNode.alpha = 0.5;
