@@ -10,7 +10,7 @@ export const NODE_LABELS: Record<NodeTypes, string> = {
   ids: "IDS/IPS",
 };
 
-export type NodeStatus = "active" | "installation";
+export type NodeStatus = "active" | "installing";
 
 // Nodes
 export interface Node {
@@ -38,7 +38,7 @@ export function createNode(type: NodeTypes, x: number, y: number): Node {
     type,
     x,
     y,
-    status: "installation",
+    status: "installing",
     installationProgress: 0,
   };
 }

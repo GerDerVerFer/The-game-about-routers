@@ -1,7 +1,7 @@
 import { Container } from "pixi.js";
 import { NodeView } from "./NodeView";
 import { createNode, type NodeTypes } from "./Types";
-import { NODE } from "../Config";
+import { INSTALL_TIME, NODE } from "../Config";
 
 export class NodeLayer {
   readonly display = new Container();
@@ -13,9 +13,11 @@ export class NodeLayer {
     const view = new NodeView(data);
     this.nodes.set(data.id, view);
     this.display.addChild(view);
+
     return view;
   }
 
+  // Removing a node by its ID
   remove(id: string): void {
     const view = this.nodes.get(id);
     if (!view) return;
@@ -23,6 +25,7 @@ export class NodeLayer {
     this.nodes.delete(id);
   }
 
+  // Getting a node by its ID
   get(id: string): NodeView | undefined {
     return this.nodes.get(id);
   }
@@ -31,6 +34,28 @@ export class NodeLayer {
   getAll(): NodeView[] {
     return Array.from(this.nodes.values());
   }
+
+  // Ticking function for progress updates
+  tick(deltaMS: number) {
+    for (const view of this.nodes.values()) {
+      if (view.data.status === "installing") {
+        // Node installation time
+        const timeRequired = INSTALL_TIME[view.data.type] || 3000;
+
+        // Updating installation progress based on deltaMS
+        view.data.installationProgress += deltaMS / timeRequired;
+
+        if (view.data.installationProgress >= 1) {
+          view.data.installationProgress = 1;
+          view.data.status = "active"; // END
+        }
+        //REdrawing
+        view.updateVisuals();
+      }
+    }
+  }
+
+  // Function to check if a point (x, y) is within any node's bounds
   hitTest(x: number, y: number): NodeView | undefined {
     // checking all nodes to see if the click is within their bounds
     for (const view of this.nodes.values()) {

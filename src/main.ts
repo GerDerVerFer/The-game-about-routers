@@ -51,8 +51,11 @@ async function init() {
   connectBtn.addEventListener("click", () => setMode("connect"));
 
   const inspectorContent = document.getElementById("inspector-content")!;
+  let currentInspectorId: string | null = null;
 
   function updateInspector(nodeId: string | null) {
+    currentInspectorId = nodeId;
+
     if (!nodeId) {
       inspectorContent.className = "empty-msg";
       inspectorContent.innerHTML =
@@ -63,17 +66,34 @@ async function init() {
     const nodeView = scene.nodes.get(nodeId);
     if (nodeView) {
       inspectorContent.className = "";
+      const isInstalling = nodeView.data.status === "installing";
+      const statusText = isInstalling
+        ? `Установка (${Math.round(nodeView.data.installationProgress * 100)}%)`
+        : "Работает";
+      const statusColor = isInstalling ? "#ffd700" : "#4ade80";
+
       inspectorContent.innerHTML = `
         <p><strong>ID:</strong> ${nodeView.data.id}</p>
         <p><strong>Тип:</strong> ${nodeView.data.type.toUpperCase()}</p>
         <p><strong>Координаты:</strong> X: ${Math.round(nodeView.data.x)}, Y: ${Math.round(nodeView.data.y)}</p>
         <hr style="border-color: #2a2f3a; margin: 12px 0;" />
-        <p style="color: #4ade80;">Статус: Работает</p>
+        <p style="color: ${statusColor};">Статус: ${statusText}</p>
       `;
     }
   }
 
   updateInspector(null);
+
+  app.ticker.add((ticker) => {
+    scene.nodes.tick(ticker.deltaMS);
+
+    if (currentInspectorId) {
+      const node = scene.nodes.get(currentInspectorId);
+      if (node && node.data.status === "installing") {
+        updateInspector(currentInspectorId);
+      }
+    }
+  });
 
   // Changing controls
   installCameraControls(
