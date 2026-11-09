@@ -49,7 +49,11 @@ export class NodeView extends Container {
 
     // Chnaging border color based on node status
     let borderColor: number = COLOR.NODE_BORDER;
-    if (this.data.status === "installing") {
+    let borderWidth: number = NODE.BORDER_WIDTH;
+    if (this.isSelected) {
+      borderColor = COLOR.NODE_BORDER_SELECTED;
+      borderWidth = NODE.BORDER_WIDTH_SELECTED;
+    } else if (this.data.status === "installing") {
       borderColor = COLOR.NODE_INSTALLING;
     } else if (this.data.status === "awaiting_config") {
       borderColor = COLOR.NODE_AWAITING_CONFIG;
@@ -61,7 +65,7 @@ export class NodeView extends Container {
     this.bg
       .roundRect(-Size / 2, -Size / 2, Size, Size, NODE.BORDER_RADIUS)
       .fill({ color: COLOR.NODE_BG })
-      .stroke({ color: borderColor, width: NODE.BORDER_WIDTH });
+      .stroke({ color: borderColor, width: borderWidth });
 
     // Updating the progress bar
     this.progressBar.clear();
