@@ -133,3 +133,24 @@ canvas {
   border-color: #636973;
   font-weight: bold;
 }
+
+.alert-popup {
+  position: absolute;
+  font-size: 14px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 100;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  animation: floatUpAndFade 1.5s ease-out forwards;
+}
+
+.alert-error { color: #f87171; }
+.alert-warning { color: #f59e0b; } 
+.alert-success { color: #4ade80; } 
+
+@keyframes floatUpAndFade {
+  0% { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translateY(-40px); }
+}

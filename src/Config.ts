@@ -14,6 +14,17 @@ export const CAMERA = {
 } as const;
 
 // ============================================================================
+// Installation TIME CONSTANTS
+export const INSTALL_TIME: Record<string, number> = {
+  router: 5000,
+  firewall: 7000,
+  server: 10000,
+  client: 3000,
+  crypto: 8000,
+  ids: 6000,
+} as const;
+
+// ============================================================================
 // VISUAL CONSTANTS
 export const COLOR = {
   BG: 0x171b24,
@@ -25,6 +36,9 @@ export const COLOR = {
   NODE_BORDER: 0x4a505c,
   NODE_BORDER_SELECTED: 0xffffff,
   NODE_TEXT: 0xcfd5de,
+  NODE_INSTALLING: 0xffd700,
+  NODE_ACTIVE: 0x4ade80,
+  NODE_AWAITING_CONFIG: 0xf59e0b,
 
   // Link colors
   LINK_LINE: 0x636973,
