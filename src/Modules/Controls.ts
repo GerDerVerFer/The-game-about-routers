@@ -11,7 +11,7 @@ export function installCameraControls(
   onChange: () => void,
   onConnect: (fromId: string, toId: string) => void,
   onSelectNode: (id: string | null) => void,
-  onAlert: (msg: string, x: number, y: number) => void,
+  onAlert: (msg: string, screenX: number, screenY: number, type: "error" | "warning" | "success") => void
 ): () => void {
   const canvas = app.canvas as HTMLCanvasElement;
   const camera = scene.camera;
@@ -43,8 +43,17 @@ export function installCameraControls(
 
     if (getMode() === "connect") {
       if (clickedNode) {
-        if (clickedNode.data.status !== "active") {
-          onAlert("Нельзя во время установки!", e.clientX, e.clientY);
+        if (clickedNode.data.status == "installing") {
+          onAlert("Нельзя во время установки!", e.clientX, e.clientY, "error");
+          return;
+        } else if (clickedNode.data.status == "awaiting_config") {
+
+          onAlert(
+            "Устройство еще не настроено!",
+            e.clientX,
+            e.clientY,
+            "warning",
+          );
           return;
         }
 

@@ -51,6 +51,8 @@ export class NodeView extends Container {
     let borderColor: number = COLOR.NODE_BORDER;
     if (this.data.status === "installing") {
       borderColor = COLOR.NODE_INSTALLING;
+    } else if (this.data.status === "awaiting_config") {
+      borderColor = COLOR.NODE_AWAITING_CONFIG;
     } else if (this.data.status === "active") {
       borderColor = COLOR.NODE_ACTIVE;
     }

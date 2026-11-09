@@ -47,7 +47,7 @@ export class NodeLayer {
 
         if (view.data.installationProgress >= 1) {
           view.data.installationProgress = 1;
-          view.data.status = "active"; // END
+          view.data.status = "awaiting_config"; // END
         }
         //REdrawing
         view.updateVisuals();

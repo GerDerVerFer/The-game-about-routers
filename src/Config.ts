@@ -38,6 +38,7 @@ export const COLOR = {
   NODE_TEXT: 0xcfd5de,
   NODE_INSTALLING: 0xffd700,
   NODE_ACTIVE: 0x4ade80,
+  NODE_AWAITING_CONFIG: 0xf59e0b,
 
   // Link colors
   LINK_LINE: 0x636973,

@@ -10,7 +10,7 @@ export const NODE_LABELS: Record<NodeTypes, string> = {
   ids: "IDS/IPS",
 };
 
-export type NodeStatus = "active" | "installing";
+export type NodeStatus = "active" | "installing" | "awaiting_config";
 
 // Nodes
 export interface Node {
