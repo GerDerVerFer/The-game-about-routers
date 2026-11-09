@@ -28,7 +28,7 @@ export class NodeView extends Container {
     const label = new Text({
       text: NODE_LABELS[data.type],
       style: new TextStyle({
-        fontFamily: "Cascadia Code",
+        fontFamily: "Cascadia Mono",
         fontSize: 12,
         fill: COLOR.NODE_TEXT,
       }),

@@ -81,6 +81,20 @@ async function init() {
       `;
     }
   }
+  function showAlert(message: string, screenX: number, screenY: number) {
+    const popup = document.createElement("div");
+    popup.className = "alert-popup";
+    popup.innerText = message;
+
+    popup.style.left = `${screenX}px`;
+    popup.style.top = `${screenY}px`;
+
+    document.body.appendChild(popup);
+
+    setTimeout(() => {
+      popup.remove();
+    }, 1500);
+  }
 
   updateInspector(null);
 
@@ -105,6 +119,7 @@ async function init() {
       scene.links.add(fromId, toId);
     },
     updateInspector,
+    showAlert,
   );
 
   // Add nodes to the scene when clicking the catalog buttons
