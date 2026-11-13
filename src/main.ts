@@ -1,5 +1,5 @@
 import { Application } from "pixi.js";
-import { COLOR, WORLD, CAMERA, GRID } from "./Config";
+import { COLOR, WORLD, CAMERA, GRID, ECONOMY } from "./Config";
 import { CanvasRenderer } from "./Modules/Canvas";
 import { installCameraControls } from "./Modules/Controls";
 import type { NodeTypes } from "./Nodes/Types";
@@ -46,6 +46,22 @@ async function init() {
 
   panBtn.addEventListener("click", () => setMode("pan"));
   connectBtn.addEventListener("click", () => setMode("connect"));
+
+  let budget = ECONOMY.START_BUDGET;
+  let currentIncome = 0;
+  let currentUpkeep = 0;
+  let timeSinceLastFinanceTick = 0;
+
+  const budgetEl = document.getElementById("ui-budget")!;
+  const incomeEl = document.getElementById("ui-income")!;
+  const upkeepEl = document.getElementById("ui-upkeep")!;
+
+  function updateFinanceUI() {
+    budgetEl.innerText = `$${Math.floor(budget)}`;
+    budgetEl.style.color = budget >= 0 ? "#4ade80" : "#f87171";
+    incomeEl.innerText = `+$${currentIncome}/с`;
+    upkeepEl.innerText = `-$${currentUpkeep}/с`;
+  }
 
   function createAlertElement(
     message: string,
@@ -175,6 +191,41 @@ async function init() {
         updateInspector(currentInspectorId);
       }
     }
+
+    timeSinceLastFinanceTick += ticker.deltaMS;
+    if (timeSinceLastFinanceTick >= 1000) {
+      timeSinceLastFinanceTick -= 1000;
+
+      currentIncome = 0;
+      currentUpkeep = 0;
+
+      const activeNodes = scene.nodes
+        .getAll()
+        .filter((node) => node.data.status === "active");
+      currentUpkeep = activeNodes.length * ECONOMY.UPKEEP_PER_NODE;
+
+      for (const node of activeNodes) {
+        if (
+          node.data.type === "client" &&
+          scene.links.isClientConnectedToServer(node.data.id)
+        ) {
+          currentIncome += ECONOMY.INCOME_PER_CLIENT;
+        }
+      }
+
+      budget += currentIncome - currentUpkeep;
+      updateFinanceUI();
+
+      if (budget < 0 && !document.getElementById("bankrupt-overlay")) {
+        const overlay = document.createElement("div");
+        overlay.id = "bankrupt-overlay";
+        overlay.style.cssText =
+          "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(23,27,36,0.9); z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f87171; font-size:32px; font-weight:bold; font-family:monospace;";
+        overlay.innerHTML =
+          "БАНКРОТСТВО<br><span style='font-size:16px; color:#cfd5de; margin-top:16px;'>Вы не смогли удержать сеть на плаву.</span>";
+        document.body.appendChild(overlay);
+      }
+    }
   });
 
   installCameraControls(
@@ -192,8 +243,24 @@ async function init() {
   document
     .querySelectorAll<HTMLButtonElement>("#catalog [data-add]")
     .forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
         const kind = btn.dataset.add as NodeTypes;
+        const cost = ECONOMY.COST[kind] || 0;
+
+        if (budget < cost) {
+          const mouseEvent = e as MouseEvent;
+          showScreenAlert(
+            "Недостаточно средств!",
+            mouseEvent.clientX,
+            mouseEvent.clientY,
+            "error",
+          );
+          return;
+        }
+
+        budget -= cost;
+        updateFinanceUI();
+
         const { width, height } = app.screen;
 
         const center = scene.camera.screenToWorld(
@@ -223,6 +290,7 @@ async function init() {
       });
     });
 
+  updateFinanceUI();
   scene.redraw();
 }
 
