@@ -88,6 +88,37 @@ export class LinkLayer {
     }
     return undefined;
   }
+
+  // Method to check if a client node is connected to any server node through links
+  isClientConnectedToServer(startNodeId: string): boolean {
+    const visited = new Set<string>();
+    const queue = [startNodeId];
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+
+      const node = this.nodeLayer.get(currentId);
+
+      // Found server node that is not the starting node, meaning the client is connected to a server
+      if (node && node.data.type === "server" && currentId !== startNodeId) {
+        return true;
+      }
+
+      // Searching for connected nodes through links
+      for (const link of this.links.values()) {
+        if (link.fromId === currentId && !visited.has(link.toId)) {
+          queue.push(link.toId);
+        }
+        if (link.toId === currentId && !visited.has(link.fromId)) {
+          queue.push(link.fromId);
+        }
+      }
+    }
+    return false;
+  }
+
   // Redraw the links on the graphics layer based on the current node positions
   redraw() {
     this.graphics.clear();

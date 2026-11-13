@@ -62,3 +62,19 @@ export const NODE = {
   BORDER_WIDTH_SELECTED: 3,
   LABEL_OFFSET_Y: 12,
 } as const;
+
+// ============================================================================
+// ECONOMIC CONSTANTS
+export const ECONOMY = {
+  START_BUDGET: 5000,
+  COST: {
+    router: 500,
+    firewall: 800,
+    server: 2000,
+    client: 100,
+    crypto: 1500,
+    ids: 1200,
+  } as Record<string, number>,
+  UPKEEP_PER_NODE: 5,
+  INCOME_PER_CLIENT: 25,
+} as const;
