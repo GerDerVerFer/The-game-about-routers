@@ -184,6 +184,7 @@ async function init() {
 
   app.ticker.add((ticker) => {
     scene.nodes.tick(ticker.deltaMS);
+    scene.packets.tick(ticker.deltaMS);
 
     if (currentInspectorId) {
       const node = scene.nodes.get(currentInspectorId);
@@ -196,21 +197,27 @@ async function init() {
     if (timeSinceLastFinanceTick >= 1000) {
       timeSinceLastFinanceTick -= 1000;
 
-      currentIncome = 0;
       currentUpkeep = 0;
 
-      const activeNodes = scene.nodes
-        .getAll()
-        .filter((node) => node.data.status === "active");
+      const allNodes = scene.nodes.getAll();
+      const activeNodes = allNodes.filter(
+        (node) => node.data.status === "active",
+      );
       currentUpkeep = activeNodes.length * ECONOMY.UPKEEP_PER_NODE;
 
+      let clientsWithPath = 0;
       for (const node of activeNodes) {
         if (node.data.type === "client") {
-          currentIncome += ECONOMY.INCOME_PER_CLIENT;
+          const path = scene.links.findPathToServer(node.data.id);
+          if (path) {
+            scene.packets.spawn(path);
+            clientsWithPath++;
+          }
         }
       }
 
-      budget += currentIncome - currentUpkeep;
+      currentIncome = clientsWithPath * ECONOMY.INCOME_PER_CLIENT;
+      budget -= currentUpkeep;
       updateFinanceUI();
 
       if (budget < 0 && !document.getElementById("bankrupt-overlay")) {
@@ -224,6 +231,11 @@ async function init() {
       }
     }
   });
+
+  scene.packets.onPacketArrive = () => {
+    budget += ECONOMY.INCOME_PER_CLIENT;
+    updateFinanceUI();
+  };
 
   installCameraControls(
     app,

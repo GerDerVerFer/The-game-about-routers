@@ -36,7 +36,11 @@ export class CanvasRenderer {
       .rect(0, 0, cameraOptions.worldWidth, cameraOptions.worldHeight)
       .stroke({ color: COLOR.WORLD_BORDER, width: 2 });
 
-    this.world.addChild(this.links.display, this.nodes.display);
+    this.world.addChild(
+      this.links.display,
+      this.packets.display,
+      this.nodes.display,
+    );
     this.app.stage.addChild(this.bounds, this.grid.display, this.world);
   }
 

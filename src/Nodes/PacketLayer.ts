@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { createPacket, type Packet } from "./Types";
 import type { NodeLayer } from "./NodeLayer";
-import { COLOR } from "../Config";
+import { COLOR, NODE } from "../Config";
 
 export class PacketLayer {
   readonly display = new Container();
@@ -25,6 +25,12 @@ export class PacketLayer {
 
     const view = new Graphics();
     view.circle(0, 0, 4).fill({ color: COLOR.PACKET }); // Dot
+    view.circle(0, 0, 8).stroke({
+      color: COLOR.PACKET,
+      alpha: NODE.PACKET_ALPHA,
+      width: NODE.PACKET_WIDTH,
+    }); // Outer circle
+
     this.views.set(packet.id, view);
     this.display.addChild(view);
 

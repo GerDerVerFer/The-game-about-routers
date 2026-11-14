@@ -33,7 +33,6 @@ export const COLOR = {
 
   // Packet Colors
   PACKET: 0x3b82f6,
-
   // Node colors
   NODE_BG: 0x2a2f3a,
   NODE_BORDER: 0x4a505c,
@@ -64,6 +63,9 @@ export const NODE = {
   BORDER_WIDTH: 2,
   BORDER_WIDTH_SELECTED: 3,
   LABEL_OFFSET_Y: 12,
+
+  PACKET_ALPHA: 0.3,
+  PACKET_WIDTH: 2,
 } as const;
 
 // ============================================================================
