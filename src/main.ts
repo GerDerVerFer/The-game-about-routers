@@ -210,8 +210,14 @@ async function init() {
         if (node.data.type === "client") {
           const path = scene.links.findPathToServer(node.data.id);
           if (path) {
-            scene.packets.spawn(path);
-            clientsWithPath++;
+            // Checking if the packet is malicious or not based on a random chance
+            const isVirus = Math.random() < ECONOMY.VIRUS_CHANCE;
+            const packetType = isVirus ? "malicious" : "data";
+
+            scene.packets.spawn(path, packetType);
+
+            // Virus packets do not contribute to income
+            if (!isVirus) clientsWithPath++;
           }
         }
       }
@@ -232,9 +238,39 @@ async function init() {
     }
   });
 
-  scene.packets.onPacketArrive = () => {
-    budget += ECONOMY.INCOME_PER_CLIENT;
+  scene.packets.onPacketArrive = (packet) => {
+    if (packet.type === "data") {
+      // Data packet reached the server, increase budget
+      budget += ECONOMY.INCOME_PER_CLIENT;
+    } else if (packet.type === "malicious") {
+      // malicious packet reached the server, apply penalty
+      budget -= ECONOMY.PENALTY;
+
+      const serverNode = scene.nodes.get(packet.path[packet.path.length - 1]);
+      if (serverNode) {
+        // Would be fun to get some funny errror message here, but for now just show a simple alert
+        showWorldAlert(
+          `Взлом! -$${ECONOMY.PENALTY}`,
+          serverNode.data.x,
+          serverNode.data.y,
+          "error",
+        );
+      }
+    }
     updateFinanceUI();
+  };
+  scene.packets.onPacketBlocked = (packet) => {
+    // FW which blocked the malicious packet getting alert
+    const fwNodeId = packet.path[packet.currentSegment + 1];
+    const fwNode = scene.nodes.get(fwNodeId);
+    if (fwNode) {
+      showWorldAlert(
+        "Вирус заблокирован!",
+        fwNode.data.x,
+        fwNode.data.y,
+        "success",
+      );
+    }
   };
 
   installCameraControls(

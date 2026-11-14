@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { createPacket, type Packet } from "./Types";
 import type { NodeLayer } from "./NodeLayer";
-import { COLOR, NODE } from "../Config";
+import { PACKET } from "../Config";
 
 export class PacketLayer {
   readonly display = new Container();
@@ -10,31 +10,43 @@ export class PacketLayer {
   private nodeLayer: NodeLayer;
 
   // Packet Speed in ppm
-  private readonly speed = 0.3;
+  private readonly speed = PACKET.SPEED;
 
   // Packet arriva callback
   public onPacketArrive?: (packet: Packet) => void;
+  public onPacketBlocked?: (packet: Packet) => void;
 
   constructor(nodeLayer: NodeLayer) {
     this.nodeLayer = nodeLayer;
   }
 
-  spawn(path: string[]) {
-    const packet = createPacket(path);
+  spawn(path: string[], type: "data" | "malicious") {
+    if (path.length < 2) return;
+
+    const packet = createPacket(path, type);
     this.packets.set(packet.id, packet);
 
     const view = new Graphics();
-    view.circle(0, 0, 4).fill({ color: COLOR.PACKET }); // Dot
-    view.circle(0, 0, 8).stroke({
-      color: COLOR.PACKET,
-      alpha: NODE.PACKET_ALPHA,
-      width: NODE.PACKET_WIDTH,
-    }); // Outer circle
+    if (type === "malicious") {
+      // Malicious
+      view.circle(0, 0, 5).fill({ color: PACKET.PACKET_MALICIOUS });
+      view.circle(0, 0, 8).stroke({
+        color: PACKET.PACKET_MALICIOUS,
+        alpha: PACKET.PACKET_ALPHA_MALICIOUS,
+        width: PACKET.PACKET_WIDTH,
+      });
+    } else {
+      // Data
+      view.circle(0, 0, 5).fill({ color: PACKET.PACKET });
+      view.circle(0, 0, 8).stroke({
+        color: PACKET.PACKET,
+        alpha: PACKET.PACKET_ALPHA,
+        width: PACKET.PACKET_WIDTH,
+      });
+    }
 
     this.views.set(packet.id, view);
     this.display.addChild(view);
-
-    // Сразу ставим в стартовую позицию
     this.updateViewPosition(packet, view);
   }
 
@@ -63,6 +75,15 @@ export class PacketLayer {
 
       if (packet.progress >= 1) {
         // End of segment
+        // Firewall check: If the packet is malicious and the next node is a firewall, block it
+        if (packet.type === "malicious" && toNode.data.type === "firewall") {
+          if (this.onPacketBlocked) this.onPacketBlocked(packet);
+          view.destroy();
+          this.views.delete(id);
+          this.packets.delete(id);
+          continue;
+        }
+
         packet.currentSegment++;
         packet.progress = 0;
 

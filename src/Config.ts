@@ -31,8 +31,6 @@ export const COLOR = {
   WORLD_BORDER: 0x2a2f3a,
   GRID_DOT: 0x636973,
 
-  // Packet Colors
-  PACKET: 0x3b82f6,
   // Node colors
   NODE_BG: 0x2a2f3a,
   NODE_BORDER: 0x4a505c,
@@ -55,6 +53,19 @@ export const GRID = {
 } as const;
 
 // ============================================================================
+// PACKET CONSTANTS
+export const PACKET = {
+  PACKET_ALPHA: 0.3,
+  PACKET_ALPHA_MALICIOUS: 0.5,
+  PACKET_WIDTH: 2,
+  SPEED: 0.3, // Pixels per millisecond
+
+  // Packet Colors
+  PACKET: 0x3b82f6,
+  PACKET_MALICIOUS: 0xef4444,
+} as const;
+
+// ============================================================================
 // NODE CONSTANTS
 export const NODE = {
   LINK_WIDTH: 4,
@@ -63,15 +74,14 @@ export const NODE = {
   BORDER_WIDTH: 2,
   BORDER_WIDTH_SELECTED: 3,
   LABEL_OFFSET_Y: 12,
-
-  PACKET_ALPHA: 0.3,
-  PACKET_WIDTH: 2,
 } as const;
 
 // ============================================================================
 // ECONOMIC CONSTANTS
 export const ECONOMY = {
   START_BUDGET: 5000,
+  VIRUS_CHANCE: 0.15,
+  PENALTY: 300,
   COST: {
     router: 500,
     firewall: 800,
