@@ -92,4 +92,5 @@ export const ECONOMY = {
   } as Record<string, number>,
   UPKEEP_PER_NODE: 5,
   INCOME_PER_CLIENT: 25,
+  BANKRUPCY_TIME: 60, // seconds
 } as const;

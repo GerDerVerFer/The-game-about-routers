@@ -10,6 +10,19 @@ type AlertType = "error" | "warning" | "success";
 
 async function init() {
   const app = new Application();
+  let isGameOver = false;
+  let bankruptTimer = 0;
+
+  const hackMessages = [
+    "Взлом! Кажется это была не картинка.",
+    "Взлом! Пароль был '123456'?",
+    "Взлом! !#&$^YWDCTT&&#@&.",
+    "Взлом! У вас в 21 порт дует!",
+    "Взлом! sudo rm -rf /",
+    "Взлом! Я тебя люблю!",
+    "Взлом! Может поставить Фаервол?",
+  ];
+
   await app.init({
     backgroundColor: COLOR.BG,
     resizeTo: window,
@@ -47,6 +60,18 @@ async function init() {
   panBtn.addEventListener("click", () => setMode("pan"));
   connectBtn.addEventListener("click", () => setMode("connect"));
 
+  // Hotkeys listeners for switching modes
+  window.addEventListener("keydown", (e) => {
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    )
+      return;
+
+    if (e.code === "Digit1" || e.key === "1") setMode("pan");
+    if (e.code === "Digit2" || e.key === "2") setMode("connect");
+  });
+
   let budget = ECONOMY.START_BUDGET;
   let currentIncome = 0;
   let currentUpkeep = 0;
@@ -80,7 +105,7 @@ async function init() {
 
     setTimeout(() => {
       popup.remove();
-    }, 1500);
+    }, 2000);
   }
 
   function showScreenAlert(
@@ -197,6 +222,8 @@ async function init() {
     if (timeSinceLastFinanceTick >= 1000) {
       timeSinceLastFinanceTick -= 1000;
 
+      // End of game
+      if (isGameOver) return;
       currentUpkeep = 0;
 
       const allNodes = scene.nodes.getAll();
@@ -226,14 +253,25 @@ async function init() {
       budget -= currentUpkeep;
       updateFinanceUI();
 
-      if (budget < 0 && !document.getElementById("bankrupt-overlay")) {
-        const overlay = document.createElement("div");
-        overlay.id = "bankrupt-overlay";
-        overlay.style.cssText =
-          "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(23,27,36,0.9); z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f87171; font-size:32px; font-weight:bold; font-family:monospace;";
-        overlay.innerHTML =
-          "БАНКРОТСТВО<br><span style='font-size:16px; color:#cfd5de; margin-top:16px;'>Вы не смогли удержать сеть на плаву.</span>";
-        document.body.appendChild(overlay);
+      if (budget < 0) {
+        bankruptTimer += 1;
+        budgetEl.innerText = `$${Math.floor(budget)} (${ECONOMY.BANKRUPCY_TIME - bankruptTimer}с)`;
+
+        if (bankruptTimer >= ECONOMY.BANKRUPCY_TIME) {
+          isGameOver = true;
+          app.ticker.stop(); // Game lost, stop the ticker to freeze the game state
+
+          // Show a "Game Over" overlay
+          const overlay = document.createElement("div");
+          overlay.id = "bankrupt-overlay";
+          overlay.style.cssText =
+            "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(23,27,36,0.9); z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f87171; font-size:32px; font-weight:bold; font-family:monospace;";
+          overlay.innerHTML =
+            "БАНКРОТСТВО<br><span style='font-size:16px; color:#cfd5de; margin-top:16px;'>Вы не смогли удержать сеть на плаву.</span>";
+          document.body.appendChild(overlay);
+        }
+      } else {
+        bankruptTimer = 0; // Dad gave us money, reset the timer
       }
     }
   });
@@ -248,9 +286,11 @@ async function init() {
 
       const serverNode = scene.nodes.get(packet.path[packet.path.length - 1]);
       if (serverNode) {
-        // Would be fun to get some funny errror message here, but for now just show a simple alert
+        // now choosing random message from the list of hackMessages
+        const randomMsg =
+          hackMessages[Math.floor(Math.random() * hackMessages.length)];
         showWorldAlert(
-          `Взлом! -$${ECONOMY.PENALTY}`,
+          `${randomMsg} -$${ECONOMY.PENALTY}`,
           serverNode.data.x,
           serverNode.data.y,
           "error",
