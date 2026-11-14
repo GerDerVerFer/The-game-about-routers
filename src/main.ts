@@ -205,10 +205,7 @@ async function init() {
       currentUpkeep = activeNodes.length * ECONOMY.UPKEEP_PER_NODE;
 
       for (const node of activeNodes) {
-        if (
-          node.data.type === "client" &&
-          scene.links.isClientConnectedToServer(node.data.id)
-        ) {
+        if (node.data.type === "client") {
           currentIncome += ECONOMY.INCOME_PER_CLIENT;
         }
       }

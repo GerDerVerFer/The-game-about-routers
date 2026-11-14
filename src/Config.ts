@@ -31,6 +31,9 @@ export const COLOR = {
   WORLD_BORDER: 0x2a2f3a,
   GRID_DOT: 0x636973,
 
+  // Packet Colors
+  PACKET: 0x3b82f6,
+
   // Node colors
   NODE_BG: 0x2a2f3a,
   NODE_BORDER: 0x4a505c,

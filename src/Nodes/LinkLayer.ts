@@ -46,7 +46,7 @@ export class LinkLayer {
     if (changed) this.redraw();
   }
   hitTest(x: number, y: number): string | undefined {
-    const clickRadius = 10; // Радиус клика по линии в мировых координатах
+    const clickRadius = 10;
     for (const [id, link] of this.links.entries()) {
       const fromNode = this.nodeLayer.get(link.fromId);
       const toNode = this.nodeLayer.get(link.toId);
@@ -57,7 +57,7 @@ export class LinkLayer {
       const x2 = toNode.data.x,
         y2 = toNode.data.y;
 
-      // Формула расстояния от точки до отрезка
+      // Formula for distance from point to line segment
       const A = x - x1;
       const B = y - y1;
       const C = x2 - x1;
@@ -90,33 +90,41 @@ export class LinkLayer {
   }
 
   // Method to check if a client node is connected to any server node through links
-  isClientConnectedToServer(startNodeId: string): boolean {
+  findPathToServer(startNodeId: string): string[] | null {
     const visited = new Set<string>();
-    const queue = [startNodeId];
+    // saving current node and the path taken to reach it
+    const queue: { nodeId: string; path: string[] }[] = [
+      { nodeId: startNodeId, path: [startNodeId] },
+    ];
 
     while (queue.length > 0) {
-      const currentId = queue.shift()!;
-      if (visited.has(currentId)) continue;
-      visited.add(currentId);
+      const { nodeId, path } = queue.shift()!;
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
 
-      const node = this.nodeLayer.get(currentId);
+      const node = this.nodeLayer.get(nodeId);
 
-      // Found server node that is not the starting node, meaning the client is connected to a server
-      if (node && node.data.type === "server" && currentId !== startNodeId) {
-        return true;
+      // Server node found, return the path
+      if (node && node.data.type === "server" && nodeId !== startNodeId) {
+        return path;
       }
 
-      // Searching for connected nodes through links
+      // Searching neighboring nodes connected by links
       for (const link of this.links.values()) {
-        if (link.fromId === currentId && !visited.has(link.toId)) {
-          queue.push(link.toId);
-        }
-        if (link.toId === currentId && !visited.has(link.fromId)) {
-          queue.push(link.fromId);
+        let nextNodeId: string | null = null;
+        if (link.fromId === nodeId) nextNodeId = link.toId;
+        else if (link.toId === nodeId) nextNodeId = link.fromId;
+
+        if (nextNodeId && !visited.has(nextNodeId)) {
+          const nextNode = this.nodeLayer.get(nextNodeId);
+          // Packets can only traverse through active nodes
+          if (nextNode && nextNode.data.status === "active") {
+            queue.push({ nodeId: nextNodeId, path: [...path, nextNodeId] });
+          }
         }
       }
     }
-    return false;
+    return null; // No way!
   }
 
   // Redraw the links on the graphics layer based on the current node positions

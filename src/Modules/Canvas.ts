@@ -4,6 +4,7 @@ import { GridRenderer, type GridOptions } from "./GridRenderer";
 import { COLOR } from "../Config";
 import { NodeLayer } from "../Nodes/NodeLayer";
 import { LinkLayer } from "../Nodes/LinkLayer";
+import { PacketLayer } from "../Nodes/PacketLayer";
 
 // Main canvas renderer class.
 // Manages the camera, grid, and world objects
@@ -15,6 +16,7 @@ export class CanvasRenderer {
   readonly bounds = new Graphics();
   readonly nodes = new NodeLayer();
   readonly links: LinkLayer;
+  readonly packets: PacketLayer;
 
   constructor(
     private app: Application,
@@ -26,6 +28,9 @@ export class CanvasRenderer {
 
     // Initialize the LinkLayer with the NodeLayer's nodes for managing connections
     this.links = new LinkLayer(this.nodes);
+
+    // Initialize the PacketLayer with the NodeLayer's nodes for managing packet paths
+    this.packets = new PacketLayer(this.nodes);
 
     this.bounds
       .rect(0, 0, cameraOptions.worldWidth, cameraOptions.worldHeight)
