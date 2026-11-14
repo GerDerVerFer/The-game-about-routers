@@ -53,6 +53,19 @@ export const GRID = {
 } as const;
 
 // ============================================================================
+// PACKET CONSTANTS
+export const PACKET = {
+  PACKET_ALPHA: 0.3,
+  PACKET_ALPHA_MALICIOUS: 0.5,
+  PACKET_WIDTH: 2,
+  SPEED: 0.3, // Pixels per millisecond
+
+  // Packet Colors
+  PACKET: 0x3b82f6,
+  PACKET_MALICIOUS: 0xef4444,
+} as const;
+
+// ============================================================================
 // NODE CONSTANTS
 export const NODE = {
   LINK_WIDTH: 4,
@@ -61,4 +74,22 @@ export const NODE = {
   BORDER_WIDTH: 2,
   BORDER_WIDTH_SELECTED: 3,
   LABEL_OFFSET_Y: 12,
+} as const;
+
+// ============================================================================
+// ECONOMIC CONSTANTS
+export const ECONOMY = {
+  START_BUDGET: 5000,
+  VIRUS_CHANCE: 0.15,
+  PENALTY: 300,
+  COST: {
+    router: 500,
+    firewall: 800,
+    server: 2000,
+    client: 100,
+    crypto: 1500,
+    ids: 1200,
+  } as Record<string, number>,
+  UPKEEP_PER_NODE: 5,
+  INCOME_PER_CLIENT: 25,
 } as const;

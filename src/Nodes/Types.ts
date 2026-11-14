@@ -50,3 +50,26 @@ export function createLink(fromId: string, toId: string): Link {
     toId,
   };
 }
+
+export interface Packet {
+  id: string;
+  type: "data" | "malicious";
+  path: string[];
+  progress: number;
+  currentSegment: number;
+}
+
+let packetIdCounter = 1;
+
+export function createPacket(
+  path: string[],
+  type: "data" | "malicious" = "data",
+): Packet {
+  return {
+    id: `p${packetIdCounter++}`,
+    type,
+    path,
+    progress: 0,
+    currentSegment: 0,
+  };
+}

@@ -46,7 +46,7 @@ export class LinkLayer {
     if (changed) this.redraw();
   }
   hitTest(x: number, y: number): string | undefined {
-    const clickRadius = 10; // Радиус клика по линии в мировых координатах
+    const clickRadius = 10;
     for (const [id, link] of this.links.entries()) {
       const fromNode = this.nodeLayer.get(link.fromId);
       const toNode = this.nodeLayer.get(link.toId);
@@ -57,7 +57,7 @@ export class LinkLayer {
       const x2 = toNode.data.x,
         y2 = toNode.data.y;
 
-      // Формула расстояния от точки до отрезка
+      // Formula for distance from point to line segment
       const A = x - x1;
       const B = y - y1;
       const C = x2 - x1;
@@ -88,6 +88,45 @@ export class LinkLayer {
     }
     return undefined;
   }
+
+  // Method to check if a client node is connected to any server node through links
+  findPathToServer(startNodeId: string): string[] | null {
+    const visited = new Set<string>();
+    // saving current node and the path taken to reach it
+    const queue: { nodeId: string; path: string[] }[] = [
+      { nodeId: startNodeId, path: [startNodeId] },
+    ];
+
+    while (queue.length > 0) {
+      const { nodeId, path } = queue.shift()!;
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
+
+      const node = this.nodeLayer.get(nodeId);
+
+      // Server node found, return the path
+      if (node && node.data.type === "server" && nodeId !== startNodeId) {
+        return path;
+      }
+
+      // Searching neighboring nodes connected by links
+      for (const link of this.links.values()) {
+        let nextNodeId: string | null = null;
+        if (link.fromId === nodeId) nextNodeId = link.toId;
+        else if (link.toId === nodeId) nextNodeId = link.fromId;
+
+        if (nextNodeId && !visited.has(nextNodeId)) {
+          const nextNode = this.nodeLayer.get(nextNodeId);
+          // Packets can only traverse through active nodes
+          if (nextNode && nextNode.data.status === "active") {
+            queue.push({ nodeId: nextNodeId, path: [...path, nextNodeId] });
+          }
+        }
+      }
+    }
+    return null; // No way!
+  }
+
   // Redraw the links on the graphics layer based on the current node positions
   redraw() {
     this.graphics.clear();
