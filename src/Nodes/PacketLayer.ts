@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { createPacket, type Packet } from "./Types";
+import { createPacket, RouterNode, type Packet } from "./Types";
 import type { NodeLayer } from "./NodeLayer";
 import { PACKET } from "../Config";
 
@@ -15,35 +15,33 @@ export class PacketLayer {
   // Packet arriva callback
   public onPacketArrive?: (packet: Packet) => void;
   public onPacketBlocked?: (packet: Packet) => void;
+  public onServerReceiveRequest?: (packet: Packet) => void;
 
   constructor(nodeLayer: NodeLayer) {
     this.nodeLayer = nodeLayer;
   }
 
-  spawn(path: string[], type: "data" | "malicious") {
+  spawn(
+    path: string[],
+    type: "data" | "malicious",
+    sourceId: string,
+    targetId: string,
+    isResponse: boolean = false,
+  ) {
     if (path.length < 2) return;
 
-    const packet = createPacket(path, type);
+    const packet = createPacket(path, type, sourceId, targetId, isResponse);
     this.packets.set(packet.id, packet);
 
     const view = new Graphics();
-    if (type === "malicious") {
-      // Malicious
-      view.circle(0, 0, 5).fill({ color: PACKET.PACKET_MALICIOUS });
-      view.circle(0, 0, 8).stroke({
-        color: PACKET.PACKET_MALICIOUS,
-        alpha: PACKET.PACKET_ALPHA_MALICIOUS,
-        width: PACKET.PACKET_WIDTH,
-      });
-    } else {
-      // Data
-      view.circle(0, 0, 5).fill({ color: PACKET.PACKET });
-      view.circle(0, 0, 8).stroke({
-        color: PACKET.PACKET,
-        alpha: PACKET.PACKET_ALPHA,
-        width: PACKET.PACKET_WIDTH,
-      });
-    }
+    const color = isResponse
+      ? 0x22c55e
+      : type === "malicious"
+        ? PACKET.PACKET_MALICIOUS
+        : PACKET.PACKET;
+
+    view.circle(0, 0, 5).fill({ color });
+    view.circle(0, 0, 8).stroke({ color, alpha: 0.3, width: 2 });
 
     this.views.set(packet.id, view);
     this.display.addChild(view);
@@ -58,21 +56,27 @@ export class PacketLayer {
       const toNode = this.nodeLayer.get(packet.path[packet.currentSegment + 1]);
 
       if (!fromNode || !toNode) {
-        // Node was removed, destroy the packet
         view.destroy();
         this.views.delete(id);
         this.packets.delete(id);
         continue;
       }
 
-      // Counting the distance between the two nodes
       const dx = toNode.data.x - fromNode.data.x;
       const dy = toNode.data.y - fromNode.data.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // Progress
       packet.progress += (this.speed * deltaMS) / distance;
+
       if (packet.progress >= 1) {
+        // reducing load
+        if (fromNode.data instanceof RouterNode) {
+          fromNode.data.currentLoad = Math.max(
+            0,
+            fromNode.data.currentLoad - 1,
+          );
+        }
+
         if (!toNode.data.canPassPacket(packet)) {
           if (this.onPacketBlocked) this.onPacketBlocked(packet);
           view.destroy();
@@ -81,9 +85,30 @@ export class PacketLayer {
           continue;
         }
 
+        // router, increasing its Load
+        if (toNode.data instanceof RouterNode) {
+          toNode.data.currentLoad++;
+        }
+
+        // Request
+        if (toNode.data.type === "server" && !packet.isResponse) {
+          if (this.onServerReceiveRequest) this.onServerReceiveRequest(packet);
+
+          // Its a virus
+          if (packet.type === "malicious" && this.onPacketArrive) {
+            this.onPacketArrive(packet);
+          }
+
+          view.destroy();
+          this.views.delete(id);
+          this.packets.delete(id);
+          continue;
+        }
+
+        // next step
         packet.currentSegment++;
         packet.progress = 0;
-        // It was last node
+
         if (packet.currentSegment >= packet.path.length - 1) {
           if (this.onPacketArrive) this.onPacketArrive(packet);
           view.destroy();

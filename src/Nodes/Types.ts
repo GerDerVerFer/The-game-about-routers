@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export type NodeTypes =
   "router" | "firewall" | "server" | "client" | "crypto" | "ids" | "external";
 
@@ -21,6 +22,9 @@ export interface Packet {
   path: string[];
   progress: number;
   currentSegment: number;
+  sourceId: string;
+  targetId: string;
+  isResponse: boolean;
 }
 
 // Nodes
@@ -45,7 +49,10 @@ let packetIdCounter = 1;
 
 export function createPacket(
   path: string[],
-  type: "data" | "malicious" = "data",
+  type: "data" | "malicious",
+  sourceId: string,
+  targetId: string,
+  isResponse: boolean = false,
 ): Packet {
   return {
     id: `p${packetIdCounter++}`,
@@ -53,12 +60,16 @@ export function createPacket(
     path,
     progress: 0,
     currentSegment: 0,
+    sourceId,
+    targetId,
+    isResponse,
   };
 }
 
 // Factory functions to create nodes and links with unique IDs
 let nodeIdCounter = 1;
 
+// Base class for all nodes
 export abstract class BaseNode {
   id: string;
   type: NodeTypes;
@@ -84,6 +95,8 @@ export abstract class BaseNode {
   }
 }
 
+// Specific node types with their unique behaviors
+// Client node generates data packets
 export class ClientNode extends BaseNode {
   constructor(x: number, y: number) {
     super("client", x, y);
@@ -93,15 +106,44 @@ export class ClientNode extends BaseNode {
   }
 }
 
+// Server node, can respond to packets and always allows packets to pass
+export class ServerNode extends BaseNode {
+  constructor(x: number, y: number) {
+    super("server", x, y);
+  }
+  public canPassPacket(_packet: Packet): boolean {
+    return true;
+  }
+}
+
+// Router node has a maximum capacity for packets and dropspackets if overloaded
+export class RouterNode extends BaseNode {
+  maxCapacity: number = 4;
+  currentLoad: number = 0;
+
+  constructor(x: number, y: number) {
+    super("router", x, y);
+  }
+  public canPassPacket(_packet: Packet): boolean {
+    return this.currentLoad < this.maxCapacity;
+  }
+}
+
+// Internet node generates malicious packets and always allows packets to pass
 export class ExternalNode extends BaseNode {
   constructor(x: number, y: number) {
     super("external", x, y);
   }
+
   public getGeneratedPacketType() {
-    return Math.random() < 0.5 ? ("malicious" as const) : null;
+    const rand = Math.random();
+    if (rand < 0.6) return "data" as const;
+    if (rand < 0.9) return "malicious" as const;
+    return null;
   }
 }
 
+// Firewall node blocks malicious packets if the blockMalicious property is true
 export class FirewallNode extends BaseNode {
   blockMalicious: boolean = true;
 
@@ -132,10 +174,15 @@ export function createNode(type: NodeTypes, x: number, y: number): BaseNode {
       return new ExternalNode(x, y);
     case "firewall":
       return new FirewallNode(x, y);
+    case "server":
+      return new ServerNode(x, y);
+    case "router":
+      return new RouterNode(x, y);
     default:
       return new StandardNode(type, x, y);
   }
 }
+
 export function createLink(fromId: string, toId: string): Link {
   return {
     id: `l${linkIdCounter++}`,

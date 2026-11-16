@@ -2,9 +2,15 @@ import { Application } from "pixi.js";
 import { COLOR, WORLD, CAMERA, GRID, ECONOMY } from "./Config";
 import { CanvasRenderer } from "./Modules/Canvas";
 import { installCameraControls } from "./Modules/Controls";
-import type { NodeTypes } from "./Nodes/Types";
+import {
+  ClientNode,
+  ExternalNode,
+  ServerNode,
+  RouterNode,
+  FirewallNode,
+  type NodeTypes,
+} from "./Nodes/Types";
 
-// Current tool mode, either "pan" for moving the camera or "connect" for linking nodes
 export type ToolMode = "pan" | "connect";
 type AlertType = "error" | "warning" | "success" | "info";
 
@@ -46,31 +52,14 @@ async function init() {
     },
   );
 
+  // --- UI ---
   let currentMode: ToolMode = "pan";
   const panBtn = document.getElementById("mode-pan")!;
   const connectBtn = document.getElementById("mode-connect")!;
+  const inspectorContent = document.getElementById("inspector-content")!;
 
-  function setMode(mode: ToolMode) {
-    currentMode = mode;
-    panBtn.classList.toggle("active", mode === "pan");
-    connectBtn.classList.toggle("active", mode === "connect");
-    app.canvas.style.cursor = mode === "pan" ? "grab" : "crosshair";
-  }
-
-  panBtn.addEventListener("click", () => setMode("pan"));
-  connectBtn.addEventListener("click", () => setMode("connect"));
-
-  // Hotkeys listeners for switching modes
-  window.addEventListener("keydown", (e) => {
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement
-    )
-      return;
-
-    if (e.code === "Digit1" || e.key === "1") setMode("pan");
-    if (e.code === "Digit2" || e.key === "2") setMode("connect");
-  });
+  let currentInspectorId: string | null = null;
+  let lastInspectorState: string | null = null;
 
   let budget = ECONOMY.START_BUDGET;
   let currentIncome = 0;
@@ -81,11 +70,19 @@ async function init() {
   const incomeEl = document.getElementById("ui-income")!;
   const upkeepEl = document.getElementById("ui-upkeep")!;
 
+  // --- HELPERS ---
   function updateFinanceUI() {
     budgetEl.innerText = `$${Math.floor(budget)}`;
     budgetEl.style.color = budget >= 0 ? "#4ade80" : "#f87171";
     incomeEl.innerText = `+$${currentIncome}/с`;
     upkeepEl.innerText = `-$${currentUpkeep}/с`;
+  }
+
+  function setMode(mode: ToolMode) {
+    currentMode = mode;
+    panBtn.classList.toggle("active", mode === "pan");
+    connectBtn.classList.toggle("active", mode === "connect");
+    app.canvas.style.cursor = mode === "pan" ? "grab" : "crosshair";
   }
 
   function createAlertElement(
@@ -97,15 +94,10 @@ async function init() {
     const popup = document.createElement("div");
     popup.className = `alert-popup alert-${type}`;
     popup.innerText = message;
-
     popup.style.left = `${screenX}px`;
     popup.style.top = `${screenY}px`;
-
     document.body.appendChild(popup);
-
-    setTimeout(() => {
-      popup.remove();
-    }, 2000);
+    setTimeout(() => popup.remove(), 2000);
   }
 
   function showScreenAlert(
@@ -132,14 +124,9 @@ async function init() {
     createAlertElement(message, screenPos.x, screenPos.y - 50, type);
   }
 
-  const inspectorContent = document.getElementById("inspector-content")!;
-  let currentInspectorId: string | null = null;
-  let lastInspectorState: string | null = null;
-
+  // --- INSPECTOR ---
   function updateInspector(nodeId: string | null, force = false) {
-    if (nodeId !== currentInspectorId) {
-      force = true;
-    }
+    if (nodeId !== currentInspectorId) force = true;
     currentInspectorId = nodeId;
 
     if (!nodeId) {
@@ -154,7 +141,6 @@ async function init() {
     if (!nodeView) return;
 
     const stateKey = `${nodeView.data.status}_${nodeView.data.status === "installing" ? Math.floor(nodeView.data.installationProgress * 10) : ""}`;
-
     if (!force && lastInspectorState === stateKey) return;
     lastInspectorState = stateKey;
 
@@ -167,22 +153,29 @@ async function init() {
     } else if (nodeView.data.status === "awaiting_config") {
       statusHtml = `
         <p style="color: #f59e0b; margin-bottom: 12px;">Статус: Ожидает настройки</p>
-        <button id="btn-activate" style="
-          background: #f59e0b; color: #171b24; border: none; 
-          padding: 10px; width: 100%; border-radius: 4px; 
-          font-weight: bold; cursor: pointer;
-        ">Активировать</button>
+        <button id="btn-activate" style="background: #f59e0b; color: #171b24; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer;">Активировать</button>
       `;
     } else if (nodeView.data.status === "active") {
-      statusHtml = `
-        <p style="color: #4ade80; margin-bottom: 12px;">Статус: Работает</p>
-        <button id="btn-toggle" style="background: #636973; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer;">Выключить</button>
-      `;
+      statusHtml = `<p style="color: #4ade80; margin-bottom: 12px;">Статус: Работает</p>`;
+
+      // FW settings
+      if (nodeView.data instanceof FirewallNode) {
+        const ruleColor = nodeView.data.blockMalicious ? "#ef4444" : "#636973";
+        const ruleText = nodeView.data.blockMalicious
+          ? "Блокировка вирусов: ВКЛ"
+          : "Блокировка вирусов: ВЫКЛ";
+        statusHtml += `<button id="btn-firewall-rule" style="background: ${ruleColor}; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 8px;">${ruleText}</button>`;
+      }
+
+      // Router Load visualization
+      if (nodeView.data instanceof RouterNode) {
+        statusHtml += `<p style="margin-top: 8px;">Нагрузка: ${nodeView.data.currentLoad} / ${nodeView.data.maxCapacity}</p>`;
+      }
+
+      statusHtml += `<button id="btn-toggle" style="background: #636973; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 8px;">Выключить устройство</button>`;
     } else if (nodeView.data.status === "disabled") {
-      statusHtml = `
-        <p style="color: #636973; margin-bottom: 12px;">Статус: Выключено</p>
-        <button id="btn-toggle" style="background: #4ade80; color: #171b24; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer;">Включить</button>
-      `;
+      statusHtml = `<p style="color: #636973; margin-bottom: 12px;">Статус: Выключено</p>`;
+      statusHtml += `<button id="btn-toggle" style="background: #4ade80; color: #171b24; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer;">Включить</button>`;
     }
 
     inspectorContent.innerHTML = `
@@ -194,135 +187,89 @@ async function init() {
     `;
 
     if (nodeView.data.status === "awaiting_config") {
-      const btn = document.getElementById("btn-activate");
-      if (btn) {
-        btn.addEventListener("click", () => {
-          nodeView.data.status = "active";
-          nodeView.data.isUsed = true;
-          nodeView.updateVisuals();
+      document.getElementById("btn-activate")?.addEventListener("click", () => {
+        nodeView.data.status = "active";
+        nodeView.data.isUsed = true;
+        nodeView.updateVisuals();
+        showWorldAlert(
+          "Устройство активировано!",
+          nodeView.data.x,
+          nodeView.data.y,
+          "success",
+        );
+        updateInspector(nodeId, true);
+      });
+    }
 
-          showWorldAlert(
-            "Устройство активировано!",
-            nodeView.data.x,
-            nodeView.data.y,
-            "success",
-          );
-
+    if (
+      nodeView.data instanceof FirewallNode &&
+      nodeView.data.status === "active"
+    ) {
+      document
+        .getElementById("btn-firewall-rule")
+        ?.addEventListener("click", () => {
+          nodeView.data.blockMalicious = !nodeView.data.blockMalicious;
           updateInspector(nodeId, true);
         });
-      }
     }
 
     if (
       nodeView.data.status === "active" ||
       nodeView.data.status === "disabled"
     ) {
-      const btn = document.getElementById("btn-toggle");
-      if (btn) {
-        btn.addEventListener("click", () => {
-          if (nodeView.data.status === "active") {
-            nodeView.data.status = "disabled";
-            showWorldAlert(
-              "Устройство выключено",
-              nodeView.data.x,
-              nodeView.data.y,
-              "info",
-            );
-          } else {
-            nodeView.data.status = "active";
-            nodeView.data.isUsed = true;
-            showWorldAlert(
-              "Устройство включено",
-              nodeView.data.x,
-              nodeView.data.y,
-              "success",
-            );
-          }
-          nodeView.updateVisuals();
-          updateInspector(nodeId, true);
-        });
-      }
+      document.getElementById("btn-toggle")?.addEventListener("click", () => {
+        if (nodeView.data.status === "active") {
+          nodeView.data.status = "disabled";
+          showWorldAlert(
+            "Устройство выключено",
+            nodeView.data.x,
+            nodeView.data.y,
+            "info",
+          );
+        } else {
+          nodeView.data.status = "active";
+          nodeView.data.isUsed = true;
+          showWorldAlert(
+            "Устройство включено",
+            nodeView.data.x,
+            nodeView.data.y,
+            "success",
+          );
+        }
+        nodeView.updateVisuals();
+        updateInspector(nodeId, true);
+      });
     }
   }
 
-  updateInspector(null);
+  // --- PACKET LOGIC ---
+  scene.packets.onServerReceiveRequest = (requestPacket) => {
+    if (requestPacket.type === "malicious") return; // Сервер не отвечает на вирусы
 
-  app.ticker.add((ticker) => {
-    scene.nodes.tick(ticker.deltaMS);
-    scene.packets.tick(ticker.deltaMS);
+    const server = scene.nodes.get(requestPacket.targetId);
+    const client = scene.nodes.get(requestPacket.sourceId);
 
-    if (currentInspectorId) {
-      const node = scene.nodes.get(currentInspectorId);
-      if (node && node.data.status !== "active") {
-        updateInspector(currentInspectorId);
+    if (server && client) {
+      const returnPath = scene.links.findPathTo(client.data.id, server.data.id);
+      if (returnPath) {
+        scene.packets.spawn(
+          returnPath,
+          "data",
+          server.data.id,
+          client.data.id,
+          true,
+        );
       }
     }
-
-    timeSinceLastFinanceTick += ticker.deltaMS;
-    if (timeSinceLastFinanceTick >= 1000) {
-      timeSinceLastFinanceTick -= 1000;
-
-      // End of game
-      if (isGameOver) return;
-      currentUpkeep = 0;
-
-      const allNodes = scene.nodes.getAll();
-      const activeNodes = allNodes.filter(
-        (node) => node.data.status === "active",
-      );
-      currentUpkeep = activeNodes.length * ECONOMY.UPKEEP_PER_NODE;
-
-      let clientsWithPath = 0;
-      for (const node of activeNodes) {
-        const packetType = node.data.getGeneratedPacketType();
-
-        if (packetType) {
-          const path = scene.links.findPathToServer(node.data.id);
-          if (path) {
-            scene.packets.spawn(path, packetType);
-            if (packetType === "data") clientsWithPath++;
-          }
-        }
-      }
-
-      currentIncome = clientsWithPath * ECONOMY.INCOME_PER_CLIENT;
-      budget -= currentUpkeep;
-      updateFinanceUI();
-
-      if (budget < 0) {
-        bankruptTimer += 1;
-        budgetEl.innerText = `$${Math.floor(budget)} (${ECONOMY.BANKRUPCY_TIME - bankruptTimer}с)`;
-
-        if (bankruptTimer >= ECONOMY.BANKRUPCY_TIME) {
-          isGameOver = true;
-          app.ticker.stop(); // Game lost, stop the ticker to freeze the game state
-
-          // Show a "Game Over" overlay
-          const overlay = document.createElement("div");
-          overlay.id = "bankrupt-overlay";
-          overlay.style.cssText =
-            "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(23,27,36,0.9); z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f87171; font-size:32px; font-weight:bold; font-family:monospace;";
-          overlay.innerHTML =
-            "БАНКРОТСТВО<br><span style='font-size:16px; color:#cfd5de; margin-top:16px;'>Вы не смогли удержать сеть на плаву.</span>";
-          document.body.appendChild(overlay);
-        }
-      } else {
-        bankruptTimer = 0; // Dad gave us money, reset the timer
-      }
-    }
-  });
+  };
 
   scene.packets.onPacketArrive = (packet) => {
     if (packet.type === "data") {
-      // Data packet reached the server, increase budget
       budget += ECONOMY.INCOME_PER_CLIENT;
     } else if (packet.type === "malicious") {
-      // malicious packet reached the server, apply penalty
       budget -= ECONOMY.PENALTY;
-
       const serverNode = scene.nodes.get(packet.path[packet.path.length - 1]);
       if (serverNode) {
-        // now choosing random message from the list of hackMessages
         const randomMsg =
           hackMessages[Math.floor(Math.random() * hackMessages.length)];
         showWorldAlert(
@@ -335,19 +282,129 @@ async function init() {
     }
     updateFinanceUI();
   };
+
   scene.packets.onPacketBlocked = (packet) => {
-    // FW which blocked the malicious packet getting alert
-    const fwNodeId = packet.path[packet.currentSegment + 1];
-    const fwNode = scene.nodes.get(fwNodeId);
-    if (fwNode) {
+    const blockerId = packet.path[packet.currentSegment + 1];
+    const blocker = scene.nodes.get(blockerId);
+    if (!blocker) return;
+
+    // ТЕПЕРЬ МЫ ПРОВЕРЯЕМ, КТО ИМЕННО ЗАБЛОКИРОВАЛ ПАКЕТ
+    if (blocker.data instanceof RouterNode) {
       showWorldAlert(
-        "Вирус заблокирован!",
-        fwNode.data.x,
-        fwNode.data.y,
-        "success",
+        "Роутер перегружен! Пакет сброшен",
+        blocker.data.x,
+        blocker.data.y,
+        "warning",
       );
+    } else if (blocker.data instanceof FirewallNode) {
+      if (packet.type === "malicious") {
+        showWorldAlert(
+          "Вирус заблокирован!",
+          blocker.data.x,
+          blocker.data.y,
+          "success",
+        );
+      } else {
+        showWorldAlert(
+          "Трафик заблокирован фаерволом",
+          blocker.data.x,
+          blocker.data.y,
+          "warning",
+        );
+      }
     }
   };
+
+  // --- GAME CYCLE ---
+  app.ticker.add((ticker) => {
+    scene.nodes.tick(ticker.deltaMS);
+    scene.packets.tick(ticker.deltaMS);
+
+    if (currentInspectorId) {
+      const node = scene.nodes.get(currentInspectorId);
+      if (node && node.data.status !== "active")
+        updateInspector(currentInspectorId);
+    }
+
+    timeSinceLastFinanceTick += ticker.deltaMS;
+    if (timeSinceLastFinanceTick >= 1000) {
+      timeSinceLastFinanceTick -= 1000;
+      if (isGameOver) return;
+
+      const allNodes = scene.nodes.getAll();
+      const activeNodes = allNodes.filter(
+        (node) => node.data.status === "active",
+      );
+      currentUpkeep = activeNodes.length * ECONOMY.UPKEEP_PER_NODE;
+
+      let clientsWithPath = 0;
+      for (const node of activeNodes) {
+        if (
+          node.data instanceof ClientNode ||
+          node.data instanceof ExternalNode
+        ) {
+          const targetServer = allNodes.find(
+            (n) => n.data instanceof ServerNode && n.data.status === "active",
+          );
+
+          if (targetServer) {
+            const path = scene.links.findPathTo(
+              targetServer.data.id,
+              node.data.id,
+            );
+            if (path) {
+              const packetType = node.data.getGeneratedPacketType();
+              if (packetType) {
+                scene.packets.spawn(
+                  path,
+                  packetType,
+                  node.data.id,
+                  targetServer.data.id,
+                  false,
+                );
+                if (packetType === "data") clientsWithPath++;
+              }
+            }
+          }
+        }
+      }
+
+      currentIncome = clientsWithPath * ECONOMY.INCOME_PER_CLIENT;
+      budget -= currentUpkeep;
+      updateFinanceUI();
+
+      if (budget < 0) {
+        bankruptTimer += 1;
+        budgetEl.innerText = `$${Math.floor(budget)} (${ECONOMY.BANKRUPCY_TIME - bankruptTimer}с)`;
+        if (bankruptTimer >= ECONOMY.BANKRUPCY_TIME) {
+          isGameOver = true;
+          app.ticker.stop();
+          const overlay = document.createElement("div");
+          overlay.id = "bankrupt-overlay";
+          overlay.style.cssText =
+            "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(23,27,36,0.9); z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f87171; font-size:32px; font-weight:bold; font-family:monospace;";
+          overlay.innerHTML =
+            "БАНКРОТСТВО<br><span style='font-size:16px; color:#cfd5de; margin-top:16px;'>Вы не смогли удержать сеть на плаву.</span>";
+          document.body.appendChild(overlay);
+        }
+      } else {
+        bankruptTimer = 0;
+      }
+    }
+  });
+
+  // --- CONTROLS ---
+  panBtn.addEventListener("click", () => setMode("pan"));
+  connectBtn.addEventListener("click", () => setMode("connect"));
+  window.addEventListener("keydown", (e) => {
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    )
+      return;
+    if (e.code === "Digit1" || e.key === "1") setMode("pan");
+    if (e.code === "Digit2" || e.key === "2") setMode("connect");
+  });
 
   installCameraControls(
     app,
@@ -356,7 +413,6 @@ async function init() {
     () => scene.redraw(),
     (fromId, toId) => scene.links.add(fromId, toId),
     updateInspector,
-
     (nodeId, screenX, screenY) => {
       const node = scene.nodes.get(nodeId);
       if (node) {
@@ -365,7 +421,6 @@ async function init() {
           ? ECONOMY.REFUND_USED
           : ECONOMY.REFUND_UNUSED;
         const refund = Math.floor(baseCost * refundRate);
-
         if (refund > 0) {
           budget += refund;
           updateFinanceUI();
@@ -373,7 +428,6 @@ async function init() {
         }
       }
     },
-
     showScreenAlert,
   );
 
@@ -385,11 +439,10 @@ async function init() {
         const cost = ECONOMY.COST[kind] || 0;
 
         if (budget < cost) {
-          const mouseEvent = e as MouseEvent;
           showScreenAlert(
             "Недостаточно средств!",
-            mouseEvent.clientX,
-            mouseEvent.clientY,
+            (e as MouseEvent).clientX,
+            (e as MouseEvent).clientY,
             "error",
           );
           return;
@@ -399,14 +452,12 @@ async function init() {
         updateFinanceUI();
 
         const { width, height } = app.screen;
-
         const center = scene.camera.screenToWorld(
           width / 2,
           height / 2,
           width,
           height,
         );
-
         let snappedX = Math.round(center.x / GRID.SPACING) * GRID.SPACING;
         let snappedY = Math.round(center.y / GRID.SPACING) * GRID.SPACING;
 
@@ -414,19 +465,17 @@ async function init() {
         while (isOccupied) {
           isOccupied = scene.nodes
             .getAll()
-            .some(
-              (node) => node.data.x === snappedX && node.data.y === snappedY,
-            );
+            .some((n) => n.data.x === snappedX && n.data.y === snappedY);
           if (isOccupied) {
             snappedX += GRID.SPACING;
             snappedY += GRID.SPACING;
           }
         }
-
         scene.nodes.add(kind, snappedX, snappedY);
       });
     });
 
+  updateInspector(null);
   updateFinanceUI();
   scene.redraw();
 }

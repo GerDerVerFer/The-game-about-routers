@@ -90,9 +90,8 @@ export class LinkLayer {
   }
 
   // Method to check if a client node is connected to any server node through links
-  findPathToServer(startNodeId: string): string[] | null {
+  findPathTo(targetNodeId: string, startNodeId: string): string[] | null {
     const visited = new Set<string>();
-    // saving current node and the path taken to reach it
     const queue: { nodeId: string; path: string[] }[] = [
       { nodeId: startNodeId, path: [startNodeId] },
     ];
@@ -102,14 +101,10 @@ export class LinkLayer {
       if (visited.has(nodeId)) continue;
       visited.add(nodeId);
 
-      const node = this.nodeLayer.get(nodeId);
-
-      // Server node found, return the path
-      if (node && node.data.type === "server" && nodeId !== startNodeId) {
+      if (nodeId === targetNodeId && nodeId !== startNodeId) {
         return path;
       }
 
-      // Searching neighboring nodes connected by links
       for (const link of this.links.values()) {
         let nextNodeId: string | null = null;
         if (link.fromId === nodeId) nextNodeId = link.toId;
@@ -117,14 +112,13 @@ export class LinkLayer {
 
         if (nextNodeId && !visited.has(nextNodeId)) {
           const nextNode = this.nodeLayer.get(nextNodeId);
-          // Packets can only traverse through active nodes
           if (nextNode && nextNode.data.status === "active") {
             queue.push({ nodeId: nextNodeId, path: [...path, nextNodeId] });
           }
         }
       }
     }
-    return null; // No way!
+    return null;
   }
 
   // Redraw the links on the graphics layer based on the current node positions
