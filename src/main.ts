@@ -205,10 +205,12 @@ async function init() {
       nodeView.data instanceof FirewallNode &&
       nodeView.data.status === "active"
     ) {
+      const fwNode = nodeView.data;
+
       document
         .getElementById("btn-firewall-rule")
         ?.addEventListener("click", () => {
-          nodeView.data.blockMalicious = !nodeView.data.blockMalicious;
+          fwNode.blockMalicious = !fwNode.blockMalicious;
           updateInspector(nodeId, true);
         });
     }
