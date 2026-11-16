@@ -274,17 +274,13 @@ async function init() {
 
       let clientsWithPath = 0;
       for (const node of activeNodes) {
-        if (node.data.type === "client") {
+        const packetType = node.data.getGeneratedPacketType();
+
+        if (packetType) {
           const path = scene.links.findPathToServer(node.data.id);
           if (path) {
-            // Checking if the packet is malicious or not based on a random chance
-            const isVirus = Math.random() < ECONOMY.VIRUS_CHANCE;
-            const packetType = isVirus ? "malicious" : "data";
-
             scene.packets.spawn(path, packetType);
-
-            // Virus packets do not contribute to income
-            if (!isVirus) clientsWithPath++;
+            if (packetType === "data") clientsWithPath++;
           }
         }
       }

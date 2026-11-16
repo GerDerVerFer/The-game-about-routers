@@ -1,15 +1,15 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
-import { NODE_LABELS, type Node } from "./Types";
+import { type BaseNode, NODE_LABELS } from "./Types";
 import { COLOR, NODE } from "../Config";
 
 const Size = NODE.SIZE;
 
 export class NodeView extends Container {
-  public readonly data: Node;
+  public readonly data: BaseNode;
   private bg: Graphics;
   private progressBar: Graphics;
   private isSelected: boolean = false;
-  constructor(data: Node) {
+  constructor(data: BaseNode) {
     super();
     this.data = data;
     this.x = data.x;

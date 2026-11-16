@@ -72,11 +72,8 @@ export class PacketLayer {
 
       // Progress
       packet.progress += (this.speed * deltaMS) / distance;
-
       if (packet.progress >= 1) {
-        // End of segment
-        // Firewall check: If the packet is malicious and the next node is a firewall, block it
-        if (packet.type === "malicious" && toNode.data.type === "firewall") {
+        if (!toNode.data.canPassPacket(packet)) {
           if (this.onPacketBlocked) this.onPacketBlocked(packet);
           view.destroy();
           this.views.delete(id);
@@ -86,7 +83,6 @@ export class PacketLayer {
 
         packet.currentSegment++;
         packet.progress = 0;
-
         // It was last node
         if (packet.currentSegment >= packet.path.length - 1) {
           if (this.onPacketArrive) this.onPacketArrive(packet);
