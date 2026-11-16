@@ -59,6 +59,8 @@ export class NodeView extends Container {
       borderColor = COLOR.NODE_AWAITING_CONFIG;
     } else if (this.data.status === "active") {
       borderColor = COLOR.NODE_ACTIVE;
+    } else if (this.data.status === "disabled") {
+      borderColor = COLOR.NODE_DISABLED;
     }
 
     // Filling the background and border of the node

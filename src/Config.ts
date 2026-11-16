@@ -38,6 +38,7 @@ export const COLOR = {
   NODE_TEXT: 0xcfd5de,
   NODE_INSTALLING: 0xffd700,
   NODE_ACTIVE: 0x4ade80,
+  NODE_DISABLED: 0x636973,
   NODE_AWAITING_CONFIG: 0xf59e0b,
 
   // Link colors
@@ -83,14 +84,16 @@ export const ECONOMY = {
   VIRUS_CHANCE: 0.15,
   PENALTY: 300,
   COST: {
-    router: 500,
-    firewall: 800,
-    server: 2000,
-    client: 100,
-    crypto: 1500,
-    ids: 1200,
+    router: 500.0,
+    firewall: 800.0,
+    server: 2000.0,
+    client: 100.0,
+    crypto: 1500.0,
+    ids: 1200.0,
   } as Record<string, number>,
   UPKEEP_PER_NODE: 5,
   INCOME_PER_CLIENT: 25,
   BANKRUPCY_TIME: 60, // seconds
+  REFUND_USED: 0.5,
+  REFUND_UNUSED: 1.0,
 } as const;

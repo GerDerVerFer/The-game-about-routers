@@ -11,6 +11,7 @@ export function installCameraControls(
   onChange: () => void,
   onConnect: (fromId: string, toId: string) => void,
   onSelectNode: (id: string | null) => void,
+  onDeleteNode: (nodeId: string, screenX: number, screenY: number) => void,
   onAlert: (
     msg: string,
     screenX: number,
@@ -169,6 +170,8 @@ export function installCameraControls(
         selectedNode = null;
         onSelectNode(null);
       }
+      // deletion callback
+      onDeleteNode(clickedNode.data.id, e.clientX, e.clientY);
       scene.links.removeByNode(clickedNode.data.id);
       scene.nodes.remove(clickedNode.data.id);
       return;

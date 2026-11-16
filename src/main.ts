@@ -6,7 +6,7 @@ import type { NodeTypes } from "./Nodes/Types";
 
 // Current tool mode, either "pan" for moving the camera or "connect" for linking nodes
 export type ToolMode = "pan" | "connect";
-type AlertType = "error" | "warning" | "success";
+type AlertType = "error" | "warning" | "success" | "info";
 
 async function init() {
   const app = new Application();
@@ -174,7 +174,15 @@ async function init() {
         ">Активировать</button>
       `;
     } else if (nodeView.data.status === "active") {
-      statusHtml = `<p style="color: #4ade80;">Статус: Работает</p>`;
+      statusHtml = `
+        <p style="color: #4ade80; margin-bottom: 12px;">Статус: Работает</p>
+        <button id="btn-toggle" style="background: #636973; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer;">Выключить</button>
+      `;
+    } else if (nodeView.data.status === "disabled") {
+      statusHtml = `
+        <p style="color: #636973; margin-bottom: 12px;">Статус: Выключено</p>
+        <button id="btn-toggle" style="background: #4ade80; color: #171b24; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer;">Включить</button>
+      `;
     }
 
     inspectorContent.innerHTML = `
@@ -190,6 +198,7 @@ async function init() {
       if (btn) {
         btn.addEventListener("click", () => {
           nodeView.data.status = "active";
+          nodeView.data.isUsed = true;
           nodeView.updateVisuals();
 
           showWorldAlert(
@@ -199,6 +208,37 @@ async function init() {
             "success",
           );
 
+          updateInspector(nodeId, true);
+        });
+      }
+    }
+
+    if (
+      nodeView.data.status === "active" ||
+      nodeView.data.status === "disabled"
+    ) {
+      const btn = document.getElementById("btn-toggle");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          if (nodeView.data.status === "active") {
+            nodeView.data.status = "disabled";
+            showWorldAlert(
+              "Устройство выключено",
+              nodeView.data.x,
+              nodeView.data.y,
+              "info",
+            );
+          } else {
+            nodeView.data.status = "active";
+            nodeView.data.isUsed = true;
+            showWorldAlert(
+              "Устройство включено",
+              nodeView.data.x,
+              nodeView.data.y,
+              "success",
+            );
+          }
+          nodeView.updateVisuals();
           updateInspector(nodeId, true);
         });
       }
@@ -318,10 +358,26 @@ async function init() {
     scene,
     () => currentMode,
     () => scene.redraw(),
-    (fromId, toId) => {
-      scene.links.add(fromId, toId);
-    },
+    (fromId, toId) => scene.links.add(fromId, toId),
     updateInspector,
+
+    (nodeId, screenX, screenY) => {
+      const node = scene.nodes.get(nodeId);
+      if (node) {
+        const baseCost = ECONOMY.COST[node.data.type] || 0;
+        const refundRate = node.data.isUsed
+          ? ECONOMY.REFUND_USED
+          : ECONOMY.REFUND_UNUSED;
+        const refund = Math.floor(baseCost * refundRate);
+
+        if (refund > 0) {
+          budget += refund;
+          updateFinanceUI();
+          showScreenAlert(`Возврат: +$${refund}`, screenX, screenY, "success");
+        }
+      }
+    },
+
     showScreenAlert,
   );
 

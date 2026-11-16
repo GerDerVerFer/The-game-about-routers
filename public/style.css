@@ -149,6 +149,8 @@ canvas {
 .alert-error { color: #f87171; }
 .alert-warning { color: #f59e0b; } 
 .alert-success { color: #4ade80; } 
+.alert-info { color: #77A3E6; } 
+
 
 @keyframes floatUpAndFade {
   0% { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
