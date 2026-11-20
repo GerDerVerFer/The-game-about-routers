@@ -12,7 +12,7 @@ import {
 } from "./Nodes/Types";
 
 export type ToolMode = "pan" | "connect";
-type AlertType = "error" | "warning" | "success" | "info";
+type AlertType = "error" | "warning" | "success" | "info" | "reboot";
 
 async function init() {
   const app = new Application();
@@ -325,7 +325,7 @@ async function init() {
     const blocker = scene.nodes.get(blockerId);
     if (!blocker) return;
 
-    // Не показываем отдельные алерты, пока устройство перезагружается.
+    // REbooted
     if (blocker.data.status === "rebooting") return;
 
     if (
@@ -336,10 +336,10 @@ async function init() {
         "currentLoad" in blocker.data &&
         "maxCapacity" in blocker.data &&
         blocker.data.currentLoad >= blocker.data.maxCapacity &&
-        Math.random() < 0.2
+        Math.random() < 0.2 // 20% шанс, чтобы не спамило
       ) {
         showWorldAlert(
-          "Перегрузка! Пакет потерян",
+          "Перегрузка! Пакеты сброшены",
           blocker.data.x,
           blocker.data.y,
           "warning",
@@ -358,7 +358,7 @@ async function init() {
           "Трафик заблокирован фаерволом",
           blocker.data.x,
           blocker.data.y,
-          "warning",
+          "info", // Изменили на голубой "info", чтобы отличать от перегрузки
         );
       }
     }
@@ -378,7 +378,16 @@ async function init() {
 
   // --- GAME CYCLE ---
   app.ticker.add((ticker) => {
-    scene.nodes.tick(ticker.deltaMS);
+    // Alert
+    scene.nodes.tick(ticker.deltaMS, (node) => {
+      showWorldAlert(
+        "Устройство ушло в перезагрузку!",
+        node.x,
+        node.y,
+        "reboot",
+      );
+    });
+
     scene.packets.tick(ticker.deltaMS);
 
     if (currentInspectorId) updateInspector(currentInspectorId);

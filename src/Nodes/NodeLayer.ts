@@ -1,6 +1,6 @@
 import { Container } from "pixi.js";
 import { NodeView } from "./NodeView";
-import { createNode, type NodeTypes } from "./Types";
+import { createNode, type NodeTypes, type BaseNode } from "./Types";
 import { INSTALL_TIME, NODE } from "../Config";
 
 export class NodeLayer {
@@ -36,9 +36,14 @@ export class NodeLayer {
   }
 
   // Ticking function for progress updates
-  tick(deltaMS: number) {
+  tick(deltaMS: number, onReboot: (node: BaseNode) => void) {
     for (const view of this.nodes.values()) {
+      const prevStatus = view.data.status;
       view.data.tick(deltaMS);
+
+      if (prevStatus !== "rebooting" && view.data.status === "rebooting") {
+        onReboot(view.data);
+      }
 
       // Installation
       if (view.data.status === "installing") {
