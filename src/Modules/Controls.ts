@@ -18,7 +18,7 @@ export function installCameraControls(
     screenY: number,
     type: "error" | "warning" | "success",
   ) => void,
-): () => void {
+): { dispose: () => void; resetSelection: () => void } {
   const canvas = app.canvas as HTMLCanvasElement;
   const camera = scene.camera;
 
@@ -32,6 +32,14 @@ export function installCameraControls(
 
   // for connect mode, we need to remember the first selected node
   let firstSelectedNodeId: string | null = null;
+
+  const resetSelection = () => {
+    if (firstSelectedNodeId) {
+      const prevNode = scene.nodes.get(firstSelectedNodeId);
+      if (prevNode) prevNode.alpha = 1;
+      firstSelectedNodeId = null;
+    }
+  };
 
   const onDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
@@ -72,11 +80,7 @@ export function installCameraControls(
           firstSelectedNodeId = null;
         }
       } else {
-        if (firstSelectedNodeId) {
-          const prevNode = scene.nodes.get(firstSelectedNodeId);
-          if (prevNode) prevNode.alpha = 1;
-          firstSelectedNodeId = null;
-        }
+        resetSelection();
       }
       return;
     }
@@ -212,11 +216,13 @@ export function installCameraControls(
   canvas.addEventListener("wheel", onWheel, { passive: false });
   canvas.style.cursor = getMode() === "pan" ? "grab" : "crosshair";
 
-  return () => {
+  const dispose = () => {
     canvas.removeEventListener("pointerdown", onDown);
+
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
     canvas.removeEventListener("contextmenu", onContextMenu);
     canvas.removeEventListener("wheel", onWheel);
   };
+  return { dispose, resetSelection };
 }

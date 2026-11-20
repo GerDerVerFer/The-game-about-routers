@@ -85,6 +85,10 @@ async function init() {
     panBtn.classList.toggle("active", mode === "pan");
     connectBtn.classList.toggle("active", mode === "connect");
     app.canvas.style.cursor = mode === "pan" ? "grab" : "crosshair";
+
+    if (mode === "pan") {
+      controls.resetSelection();
+    }
   }
 
   function createAlertElement(
@@ -434,7 +438,7 @@ async function init() {
     if (e.code === "Digit2" || e.key === "2") setMode("connect");
   });
 
-  installCameraControls(
+  const controls = installCameraControls(
     app,
     scene,
     () => currentMode,
