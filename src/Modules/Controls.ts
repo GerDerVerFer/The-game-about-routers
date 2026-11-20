@@ -141,8 +141,25 @@ export function installCameraControls(
 
   const onUp = () => {
     if (draggingNode) {
-      const snappedX = Math.round(draggingNode.data.x / GRID_SNAP) * GRID_SNAP;
-      const snappedY = Math.round(draggingNode.data.y / GRID_SNAP) * GRID_SNAP;
+      let snappedX = Math.round(draggingNode.data.x / GRID_SNAP) * GRID_SNAP;
+      let snappedY = Math.round(draggingNode.data.y / GRID_SNAP) * GRID_SNAP;
+
+      // Ищем свободное место (исключая саму перетаскиваемую ноду)
+      let isOccupied = true;
+      while (isOccupied) {
+        isOccupied = scene.nodes
+          .getAll()
+          .some(
+            (n) =>
+              n !== draggingNode &&
+              n.data.x === snappedX &&
+              n.data.y === snappedY,
+          );
+        if (isOccupied) {
+          snappedX += GRID_SNAP;
+          snappedY += GRID_SNAP;
+        }
+      }
 
       draggingNode.data.x = snappedX;
       draggingNode.data.y = snappedY;

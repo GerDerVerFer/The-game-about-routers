@@ -63,10 +63,11 @@ export class NodeLayer {
   // Function to check if a point (x, y) is within any node's bounds
   hitTest(x: number, y: number): NodeView | undefined {
     // checking all nodes to see if the click is within their bounds
-    for (const view of this.nodes.values()) {
+    const nodesArray = Array.from(this.nodes.values());
+    for (let i = nodesArray.length - 1; i >= 0; i--) {
+      const view = nodesArray[i];
       const dx = x - view.data.x;
       const dy = y - view.data.y;
-      // If the click is within the node's bounds
       if (Math.abs(dx) <= NODE.SIZE / 2 && Math.abs(dy) <= NODE.SIZE / 2) {
         return view;
       }

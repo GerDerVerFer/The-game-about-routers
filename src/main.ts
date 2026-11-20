@@ -425,16 +425,23 @@ async function init() {
               const packetCount = node.data instanceof ExternalNode ? 3 : 1;
 
               for (let i = 0; i < packetCount; i++) {
-                const packetType = node.data.getGeneratedPacketType();
-                if (packetType) {
-                  scene.packets.spawn(
-                    path,
-                    packetType,
-                    node.data.id,
-                    targetServer.data.id,
-                    false,
-                  );
-                }
+                // Async packets
+                setTimeout(
+                  () => {
+                    if (isGameOver) return; // Game stopped
+                    const packetType = node.data.getGeneratedPacketType();
+                    if (packetType) {
+                      scene.packets.spawn(
+                        path,
+                        packetType,
+                        node.data.id,
+                        targetServer.data.id,
+                        false,
+                      );
+                    }
+                  },
+                  i * 200 + Math.random() * 100,
+                ); // DElay
               }
             }
           }
@@ -452,7 +459,7 @@ async function init() {
         budgetEl.innerText = `$${Math.floor(budget)} (${ECONOMY.BANKRUPCY_TIME - bankruptTimer}с)`;
         if (
           bankruptTimer >= ECONOMY.BANKRUPCY_TIME ||
-          budget === ((ECONOMY.START_BUDGET * -1) as number)
+          budget <= ((ECONOMY.START_BUDGET * -1) as number)
         ) {
           isGameOver = true;
           app.ticker.stop();
