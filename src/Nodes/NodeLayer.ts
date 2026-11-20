@@ -38,20 +38,20 @@ export class NodeLayer {
   // Ticking function for progress updates
   tick(deltaMS: number) {
     for (const view of this.nodes.values()) {
-      if (view.data.status === "installing") {
-        // Node installation time
-        const timeRequired = INSTALL_TIME[view.data.type] || 3000;
+      view.data.tick(deltaMS);
 
-        // Updating installation progress based on deltaMS
+      // Installation
+      if (view.data.status === "installing") {
+        const timeRequired = INSTALL_TIME[view.data.type] || 3000;
         view.data.installationProgress += deltaMS / timeRequired;
 
         if (view.data.installationProgress >= 1) {
           view.data.installationProgress = 1;
-          view.data.status = "awaiting_config"; // END
+          view.data.status = "awaiting_config";
         }
-        //REdrawing
-        view.updateVisuals();
       }
+      // Every second updates
+      view.updateVisuals();
     }
   }
 

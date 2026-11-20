@@ -146,7 +146,19 @@ async function init() {
     const nodeView = scene.nodes.get(nodeId);
     if (!nodeView) return;
 
-    const stateKey = `${nodeView.data.status}_${nodeView.data.status === "installing" ? Math.floor(nodeView.data.installationProgress * 10) : ""}`;
+    const loadRounded =
+      "currentLoad" in nodeView.data
+        ? Math.floor(nodeView.data.currentLoad)
+        : "";
+    const rebootRounded =
+      "rebootTimer" in nodeView.data
+        ? Math.floor(nodeView.data.rebootTimer / 100)
+        : "";
+    const installProgress =
+      nodeView.data.status === "installing"
+        ? Math.floor(nodeView.data.installationProgress * 10)
+        : "";
+    const stateKey = `${nodeView.data.status}_${loadRounded}_${rebootRounded}_${installProgress}`;
     if (!force && lastInspectorState === stateKey) return;
     lastInspectorState = stateKey;
 
@@ -164,6 +176,22 @@ async function init() {
     } else if (nodeView.data.status === "active") {
       statusHtml = `<p style="color: #4ade80; margin-bottom: 12px;">Статус: Работает</p>`;
 
+      // Load visualization
+      if (
+        "maxCapacity" in nodeView.data &&
+        "currentLoad" in nodeView.data &&
+        nodeView.data.maxCapacity > 0
+      ) {
+        const loadPercent = Math.round(
+          (nodeView.data.currentLoad / nodeView.data.maxCapacity) * 100,
+        );
+        let loadColor = "#4ade80";
+        if (loadPercent > 80) loadColor = "#ef4444";
+        else if (loadPercent > 50) loadColor = "#f59e0b";
+
+        statusHtml += `<p style="margin-top: 8px;">Нагрузка: <span style="color: ${loadColor};">${Math.floor(nodeView.data.currentLoad)} / ${nodeView.data.maxCapacity}</span></p>`;
+      }
+
       // FW settings
       if (nodeView.data instanceof FirewallNode) {
         const ruleColor = nodeView.data.blockMalicious ? "#ef4444" : "#636973";
@@ -173,12 +201,12 @@ async function init() {
         statusHtml += `<button id="btn-firewall-rule" style="background: ${ruleColor}; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 8px;">${ruleText}</button>`;
       }
 
-      // Router Load visualization
-      if (nodeView.data instanceof RouterNode) {
-        statusHtml += `<p style="margin-top: 8px;">Нагрузка: ${nodeView.data.currentLoad} / ${nodeView.data.maxCapacity}</p>`;
-      }
-
       statusHtml += `<button id="btn-toggle" style="background: #636973; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 8px;">Выключить устройство</button>`;
+    } else if (nodeView.data.status === "rebooting") {
+      const rebootPercent = Math.round(
+        (1 - nodeView.data.rebootTimer / nodeView.data.rebootDuration) * 100,
+      );
+      statusHtml = `<p style="color: #ef4444; font-weight: bold; margin-bottom: 12px;">Перезагрузка (${rebootPercent}%)</p>`;
     } else if (nodeView.data.status === "disabled") {
       statusHtml = `<p style="color: #636973; margin-bottom: 12px;">Статус: Выключено</p>`;
       statusHtml += `<button id="btn-toggle" style="background: #4ade80; color: #171b24; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer;">Включить</button>`;
@@ -297,14 +325,26 @@ async function init() {
     const blocker = scene.nodes.get(blockerId);
     if (!blocker) return;
 
-    // ТЕПЕРЬ МЫ ПРОВЕРЯЕМ, КТО ИМЕННО ЗАБЛОКИРОВАЛ ПАКЕТ
-    if (blocker.data instanceof RouterNode) {
-      showWorldAlert(
-        "Роутер перегружен! Пакет сброшен",
-        blocker.data.x,
-        blocker.data.y,
-        "warning",
-      );
+    // Не показываем отдельные алерты, пока устройство перезагружается.
+    if (blocker.data.status === "rebooting") return;
+
+    if (
+      blocker.data instanceof RouterNode ||
+      blocker.data instanceof ServerNode
+    ) {
+      if (
+        "currentLoad" in blocker.data &&
+        "maxCapacity" in blocker.data &&
+        blocker.data.currentLoad >= blocker.data.maxCapacity &&
+        Math.random() < 0.2
+      ) {
+        showWorldAlert(
+          "Перегрузка! Пакеты дропаются",
+          blocker.data.x,
+          blocker.data.y,
+          "warning",
+        );
+      }
     } else if (blocker.data instanceof FirewallNode) {
       if (packet.type === "malicious") {
         showWorldAlert(
@@ -341,11 +381,7 @@ async function init() {
     scene.nodes.tick(ticker.deltaMS);
     scene.packets.tick(ticker.deltaMS);
 
-    if (currentInspectorId) {
-      const node = scene.nodes.get(currentInspectorId);
-      if (node && node.data.status !== "active")
-        updateInspector(currentInspectorId);
-    }
+    if (currentInspectorId) updateInspector(currentInspectorId);
 
     timeSinceLastFinanceTick += ticker.deltaMS;
     if (timeSinceLastFinanceTick >= 1000) {

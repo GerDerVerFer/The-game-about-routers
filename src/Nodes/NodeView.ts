@@ -58,7 +58,18 @@ export class NodeView extends Container {
     } else if (this.data.status === "awaiting_config") {
       borderColor = COLOR.NODE_AWAITING_CONFIG;
     } else if (this.data.status === "active") {
-      borderColor = COLOR.NODE_ACTIVE;
+      // Blicking when on edge
+      const isOverloaded = this.data.currentLoad >= this.data.maxCapacity;
+      if (isOverloaded) {
+        const blink = Math.floor(Date.now() / 150) % 2 === 0;
+        borderColor = blink ? COLOR.NODE_BLINK : COLOR.NODE_ACTIVE;
+        borderWidth = 4;
+      } else {
+        borderColor = COLOR.NODE_ACTIVE;
+      }
+    } else if (this.data.status === "rebooting") {
+      borderColor = COLOR.NODE_IN_REBOOT;
+      borderWidth = NODE.BORDER_WIDTH_REBOOTING;
     } else if (this.data.status === "disabled") {
       borderColor = COLOR.NODE_DISABLED;
     }

@@ -13,7 +13,7 @@ export const NODE_LABELS: Record<NodeTypes, string> = {
 };
 
 export type NodeStatus =
-  "active" | "installing" | "awaiting_config" | "disabled";
+  "active" | "installing" | "awaiting_config" | "disabled" | "rebooting";
 
 // Packets
 export interface Packet {
@@ -79,6 +79,14 @@ export abstract class BaseNode {
   installationProgress: number = 0;
   isUsed: boolean = false;
 
+  overloadAccumulator: number = 0; // MS! node were overloaded ticker
+  maxOverloadTime: number = 4000; // REboot timer
+  rebootDuration: number = 5000; // Rebooting
+  rebootTimer: number = 0;
+
+  currentLoad: number = 0;
+  maxCapacity: number = 100;
+
   constructor(type: NodeTypes, x: number, y: number) {
     this.id = `n${nodeIdCounter++}`;
     this.type = type;
@@ -91,7 +99,44 @@ export abstract class BaseNode {
   }
 
   public canPassPacket(_packet: Packet): boolean {
+    if (this.status === "rebooting") return false;
+    if (this.currentLoad >= this.maxCapacity) return false;
     return true;
+  }
+
+  // Ticking on devices
+  public tick(deltaMS: number) {
+    if (this.status === "rebooting") {
+      this.rebootTimer -= deltaMS;
+      if (this.rebootTimer <= 0) {
+        this.status = "active"; // Rebooted!
+        this.currentLoad = 0;
+        this.overloadAccumulator = 0;
+      }
+      return; // Cant heat or cool
+    }
+
+    // Cooling
+    if (this.currentLoad > 0) {
+      this.currentLoad = Math.max(0, this.currentLoad - deltaMS / 1000);
+    }
+
+    // Heating logic
+    if (this.currentLoad >= this.maxCapacity) {
+      this.overloadAccumulator += deltaMS;
+      if (this.overloadAccumulator >= this.maxOverloadTime) {
+        // REbooting
+        this.status = "rebooting";
+        this.rebootTimer = this.rebootDuration;
+        this.currentLoad = 0;
+      }
+    } else {
+      // Cooling
+      this.overloadAccumulator = Math.max(
+        0,
+        this.overloadAccumulator - deltaMS,
+      );
+    }
   }
 }
 
@@ -110,22 +155,17 @@ export class ClientNode extends BaseNode {
 export class ServerNode extends BaseNode {
   constructor(x: number, y: number) {
     super("server", x, y);
-  }
-  public canPassPacket(_packet: Packet): boolean {
-    return true;
+    this.maxCapacity = 10;
+    this.maxOverloadTime = 5000;
   }
 }
 
 // Router node has a maximum capacity for packets and dropspackets if overloaded
 export class RouterNode extends BaseNode {
-  maxCapacity: number = 4;
-  currentLoad: number = 0;
-
   constructor(x: number, y: number) {
     super("router", x, y);
-  }
-  public canPassPacket(_packet: Packet): boolean {
-    return this.currentLoad < this.maxCapacity;
+    this.maxCapacity = 8;
+    this.maxOverloadTime = 3000;
   }
 }
 
@@ -149,9 +189,12 @@ export class FirewallNode extends BaseNode {
 
   constructor(x: number, y: number) {
     super("firewall", x, y);
+    this.maxCapacity = 10;
+    this.maxOverloadTime = 4000;
   }
 
   public canPassPacket(packet: Packet): boolean {
+    if (!super.canPassPacket(packet)) return false;
     if (packet.type === "malicious" && this.blockMalicious) {
       return false;
     }
@@ -159,7 +202,7 @@ export class FirewallNode extends BaseNode {
   }
 }
 
-// Остальные ноды (Роутер, Сервер, СКЗИ, IDS) - просто заглушки
+// Dummies (now)
 export class StandardNode extends BaseNode {
   constructor(type: NodeTypes, x: number, y: number) {
     super(type, x, y);

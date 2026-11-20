@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { createPacket, RouterNode, type Packet } from "./Types";
+import { createPacket, type Packet } from "./Types";
 import type { NodeLayer } from "./NodeLayer";
 import { PACKET } from "../Config";
 
@@ -69,14 +69,6 @@ export class PacketLayer {
       packet.progress += (this.speed * deltaMS) / distance;
 
       if (packet.progress >= 1) {
-        // reducing load
-        if (fromNode.data instanceof RouterNode) {
-          fromNode.data.currentLoad = Math.max(
-            0,
-            fromNode.data.currentLoad - 1,
-          );
-        }
-
         if (!toNode.data.canPassPacket(packet)) {
           if (this.onPacketBlocked) this.onPacketBlocked(packet);
           view.destroy();
@@ -85,10 +77,8 @@ export class PacketLayer {
           continue;
         }
 
-        // router, increasing its Load
-        if (toNode.data instanceof RouterNode) {
-          toNode.data.currentLoad++;
-        }
+        // Any node receiving a packet accumulates load.
+        toNode.data.currentLoad += 1;
 
         // Request
         if (toNode.data.type === "server" && !packet.isResponse) {
