@@ -62,9 +62,11 @@ async function init() {
   let lastInspectorState: string | null = null;
 
   let budget = ECONOMY.START_BUDGET;
-  let currentIncome = 0;
   let currentUpkeep = 0;
   let timeSinceLastFinanceTick = 0;
+
+  let currentIncome = 0;
+  let actualIncomeAccumulator = 0;
 
   const budgetEl = document.getElementById("ui-budget")!;
   const incomeEl = document.getElementById("ui-income")!;
@@ -268,6 +270,7 @@ async function init() {
   scene.packets.onPacketArrive = (packet) => {
     if (packet.type === "data") {
       budget += ECONOMY.INCOME_PER_CLIENT;
+      actualIncomeAccumulator += ECONOMY.INCOME_PER_CLIENT;
     } else if (packet.type === "malicious") {
       budget -= ECONOMY.PENALTY;
       const serverNode = scene.nodes.get(packet.path[packet.path.length - 1]);
@@ -317,6 +320,18 @@ async function init() {
     }
   };
 
+  // INTERNET
+  const internetSpawnX = WORLD.WIDTH / 2 - 300;
+  const internetSpawnY = WORLD.HEIGHT / 2 - 200;
+  const internetNode = scene.nodes.add(
+    "external",
+    internetSpawnX,
+    internetSpawnY,
+  );
+  internetNode.data.status = "active";
+  internetNode.data.isUsed = true;
+  internetNode.updateVisuals();
+
   // --- GAME CYCLE ---
   app.ticker.add((ticker) => {
     scene.nodes.tick(ticker.deltaMS);
@@ -337,9 +352,12 @@ async function init() {
       const activeNodes = allNodes.filter(
         (node) => node.data.status === "active",
       );
-      currentUpkeep = activeNodes.length * ECONOMY.UPKEEP_PER_NODE;
 
-      let clientsWithPath = 0;
+      // Counting all except internet node
+      const billableNodes = activeNodes.filter(
+        (node) => !(node.data instanceof ExternalNode),
+      );
+      currentUpkeep = billableNodes.length * ECONOMY.UPKEEP_PER_NODE;
       for (const node of activeNodes) {
         if (
           node.data instanceof ClientNode ||
@@ -355,30 +373,38 @@ async function init() {
               node.data.id,
             );
             if (path) {
-              const packetType = node.data.getGeneratedPacketType();
-              if (packetType) {
-                scene.packets.spawn(
-                  path,
-                  packetType,
-                  node.data.id,
-                  targetServer.data.id,
-                  false,
-                );
-                if (packetType === "data") clientsWithPath++;
+              const packetCount = node.data instanceof ExternalNode ? 3 : 1;
+
+              for (let i = 0; i < packetCount; i++) {
+                const packetType = node.data.getGeneratedPacketType();
+                if (packetType) {
+                  scene.packets.spawn(
+                    path,
+                    packetType,
+                    node.data.id,
+                    targetServer.data.id,
+                    false,
+                  );
+                }
               }
             }
           }
         }
       }
 
-      currentIncome = clientsWithPath * ECONOMY.INCOME_PER_CLIENT;
+      currentIncome = actualIncomeAccumulator;
+      actualIncomeAccumulator = 0; // Resetting
+
       budget -= currentUpkeep;
       updateFinanceUI();
 
       if (budget < 0) {
         bankruptTimer += 1;
         budgetEl.innerText = `$${Math.floor(budget)} (${ECONOMY.BANKRUPCY_TIME - bankruptTimer}с)`;
-        if (bankruptTimer >= ECONOMY.BANKRUPCY_TIME) {
+        if (
+          bankruptTimer >= ECONOMY.BANKRUPCY_TIME ||
+          budget === ((ECONOMY.START_BUDGET * -1) as number)
+        ) {
           isGameOver = true;
           app.ticker.stop();
           const overlay = document.createElement("div");
@@ -413,7 +439,37 @@ async function init() {
     scene,
     () => currentMode,
     () => scene.redraw(),
-    (fromId, toId) => scene.links.add(fromId, toId),
+    (fromId, toId) => {
+      const fromNode = scene.nodes.get(fromId);
+      const toNode = scene.nodes.get(toId);
+
+      if (!fromNode || !toNode) return;
+
+      // checking if it is a server
+      const fromIsServer = fromNode.data instanceof ServerNode;
+      const toIsServer = toNode.data instanceof ServerNode;
+
+      // Checking if it is a router or firewall
+      const fromIsNetwork =
+        fromNode.data instanceof RouterNode ||
+        fromNode.data instanceof FirewallNode;
+      const toIsNetwork =
+        toNode.data instanceof RouterNode ||
+        toNode.data instanceof FirewallNode;
+
+      // It's now Server-(Router/Firewall)
+      if ((fromIsServer && !toIsNetwork) || (toIsServer && !fromIsNetwork)) {
+        showWorldAlert(
+          "Сервер подключается только через Роутер/Фаервол!",
+          toNode.data.x,
+          toNode.data.y,
+          "error",
+        );
+        return;
+      }
+
+      scene.links.add(fromId, toId);
+    },
     updateInspector,
     (nodeId, screenX, screenY) => {
       const node = scene.nodes.get(nodeId);
