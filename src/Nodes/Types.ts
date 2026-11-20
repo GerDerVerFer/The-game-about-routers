@@ -118,7 +118,7 @@ export abstract class BaseNode {
 
     // Cooling
     if (this.currentLoad > 0) {
-      this.currentLoad = Math.max(0, this.currentLoad - deltaMS / 1000);
+      this.currentLoad = Math.max(0, this.currentLoad - deltaMS / 400);
     }
 
     // Heating logic
@@ -156,7 +156,7 @@ export class ServerNode extends BaseNode {
   constructor(x: number, y: number) {
     super("server", x, y);
     this.maxCapacity = 10;
-    this.maxOverloadTime = 5000;
+    this.maxOverloadTime = 10000;
   }
 }
 
@@ -165,7 +165,7 @@ export class RouterNode extends BaseNode {
   constructor(x: number, y: number) {
     super("router", x, y);
     this.maxCapacity = 8;
-    this.maxOverloadTime = 3000;
+    this.maxOverloadTime = 6000;
   }
 }
 
@@ -190,7 +190,7 @@ export class FirewallNode extends BaseNode {
   constructor(x: number, y: number) {
     super("firewall", x, y);
     this.maxCapacity = 10;
-    this.maxOverloadTime = 4000;
+    this.maxOverloadTime = 8000;
   }
 
   public canPassPacket(packet: Packet): boolean {
