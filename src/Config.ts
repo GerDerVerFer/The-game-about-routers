@@ -27,24 +27,35 @@ export const INSTALL_TIME: Record<string, number> = {
 // ============================================================================
 // VISUAL CONSTANTS
 export const COLOR = {
+  // World
   BG: 0x171b24,
   WORLD_BORDER: 0x2a2f3a,
   GRID_DOT: 0x636973,
 
-  // Node colors
-  NODE_BG: 0x2a2f3a,
-  NODE_BLINK: 0xc90000,
+  // Packets
+  PACKET: 0x3b82f6,
+  PACKET_RESPONCE: 0x22c55e,
+  PACKET_MALICIOUS: 0xef4444,
+
+  // Node base colors
+  NODE_BG: 0x1e2430,
   NODE_BORDER: 0x4a505c,
   NODE_BORDER_SELECTED: 0xffffff,
   NODE_TEXT: 0xcfd5de,
-  NODE_INSTALLING: 0xffd700,
-  NODE_IN_REBOOT: 0xe3d73d,
-  NODE_ACTIVE: 0x4ade80,
-  NODE_DISABLED: 0x636973,
+
+  // Blinks
+  NODE_BLINK_1: 0xf43f5e,
+  NODE_BLINK_2: 0xffe4e6,
+
+  // Status colors
+  NODE_ACTIVE: 0x22c55e,
+  NODE_INSTALLING: 0x38bdf8,
+  NODE_IN_REBOOT: 0xa855f7,
   NODE_AWAITING_CONFIG: 0xf59e0b,
+  NODE_DISABLED: 0x475569,
 
   // Link colors
-  LINK_LINE: 0x636973,
+  LINK_LINE: 0x64748b,
 } as const;
 
 // ============================================================================
@@ -62,10 +73,6 @@ export const PACKET = {
   PACKET_ALPHA_MALICIOUS: 0.5,
   PACKET_WIDTH: 2,
   SPEED: 0.3, // Pixels per millisecond
-
-  // Packet Colors
-  PACKET: 0x3b82f6,
-  PACKET_MALICIOUS: 0xef4444,
 } as const;
 
 // ============================================================================

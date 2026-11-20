@@ -62,7 +62,7 @@ export class NodeView extends Container {
       const isOverloaded = this.data.currentLoad >= this.data.maxCapacity;
       if (isOverloaded) {
         const blink = Math.floor(Date.now() / 150) % 2 === 0;
-        borderColor = blink ? COLOR.NODE_BLINK : COLOR.NODE_ACTIVE;
+        borderColor = blink ? COLOR.NODE_BLINK_1 : COLOR.NODE_BLINK_2;
         borderWidth = 4;
       } else {
         borderColor = COLOR.NODE_ACTIVE;

@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import { createPacket, type Packet } from "./Types";
 import type { NodeLayer } from "./NodeLayer";
-import { PACKET } from "../Config";
+import { COLOR, PACKET } from "../Config";
 
 export class PacketLayer {
   readonly display = new Container();
@@ -35,10 +35,10 @@ export class PacketLayer {
 
     const view = new Graphics();
     const color = isResponse
-      ? 0x22c55e
+      ? COLOR.PACKET_RESPONCE
       : type === "malicious"
-        ? PACKET.PACKET_MALICIOUS
-        : PACKET.PACKET;
+        ? COLOR.PACKET_MALICIOUS
+        : COLOR.PACKET;
 
     view.circle(0, 0, 5).fill({ color });
     view.circle(0, 0, 8).stroke({ color, alpha: 0.3, width: 2 });
@@ -69,6 +69,9 @@ export class PacketLayer {
       packet.progress += (this.speed * deltaMS) / distance;
 
       if (packet.progress >= 1) {
+        // Incrementing BEFORE check
+        toNode.data.currentLoad += 1;
+
         if (!toNode.data.canPassPacket(packet)) {
           if (this.onPacketBlocked) this.onPacketBlocked(packet);
           view.destroy();
@@ -76,9 +79,6 @@ export class PacketLayer {
           this.packets.delete(id);
           continue;
         }
-
-        // Any node receiving a packet accumulates load.
-        toNode.data.currentLoad += 1;
 
         // Request
         if (toNode.data.type === "server" && !packet.isResponse) {

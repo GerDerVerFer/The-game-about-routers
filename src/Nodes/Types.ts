@@ -156,7 +156,7 @@ export class ServerNode extends BaseNode {
   constructor(x: number, y: number) {
     super("server", x, y);
     this.maxCapacity = 10;
-    this.maxOverloadTime = 10000;
+    this.maxOverloadTime = 8000;
   }
 }
 

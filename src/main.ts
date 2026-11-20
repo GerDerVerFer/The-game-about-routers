@@ -339,7 +339,7 @@ async function init() {
         Math.random() < 0.2
       ) {
         showWorldAlert(
-          "Перегрузка! Пакеты дропаются",
+          "Перегрузка! Пакет потерян",
           blocker.data.x,
           blocker.data.y,
           "warning",
